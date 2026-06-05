@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,71 +24,74 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#d5ecea] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <Shield className="h-16 w-16 text-[#096260]" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-[#082b36]">
-          Lead Shield
-        </h2>
-        <p className="mt-2 text-center text-sm text-[#096260]">
-          Secure Tenant Access Portal
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleLogin}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email address</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 border-gray-300 rounded-md py-2 px-3 border outline-none focus:ring-2 focus:ring-[#5fb4a9] focus:border-transparent transition-all"
-                  placeholder="admin@leadshield.com"
-                />
-              </div>
+    <div className="bg-[#d5ecea] min-h-screen font-sans text-[#082b36] flex flex-col antialiased">
+      <div className="flex-1 flex items-center justify-center py-10">
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-[#096260]/5 overflow-hidden">
+          
+          {/* Branded login card header */}
+          <div className="bg-[#082b36] p-8 text-center relative border-b border-white/5">
+            <div className="mx-auto w-10 h-10 bg-[#096260] rounded-xl flex items-center justify-center border border-[#5fb4a9]/30">
+              <div className="w-3.5 h-3.5 bg-white rounded-full"></div>
             </div>
+            <h2 className="text-white text-xl font-bold tracking-tight mt-3">Lead Shield</h2>
+            <p className="text-[#5fb4a9] text-[10px] uppercase tracking-[0.2em] mt-1 font-semibold">Secure Authenticator Wall</p>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 border-gray-300 rounded-md py-2 px-3 border outline-none focus:ring-2 focus:ring-[#5fb4a9] focus:border-transparent transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleLogin} className="p-8 space-y-4">
+            
             {error && (
-              <div className="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-md border border-red-200">
-                {error}
+              <div className="bg-red-50 border border-red-500/10 text-red-950 p-4 rounded-2xl text-xs space-y-0.5 animate-pulse">
+                <p className="font-bold">Access Denied</p>
+                <p className="text-red-700/90 leading-tight">{error}</p>
               </div>
             )}
 
             <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#096260] hover:bg-[#082b36] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5fb4a9] transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Authenticating...' : 'Sign In'}
-                {!loading && <ArrowRight className="ml-2 h-5 w-5" />}
-              </button>
+              <label className="block text-[10px] font-bold text-[#082b36] uppercase tracking-wider mb-1.5">Email Address</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@leadshield.com"
+                required
+                className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2.5 px-3.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#096260] text-[#082b36] placeholder-[#082b36]/35 font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-[#082b36] uppercase tracking-wider mb-1.5">Secure Keyphrase Password</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2.5 px-3.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#096260] text-[#082b36] placeholder-[#082b36]/40 font-medium"
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-[#096260] hover:bg-[#5fb4a9] text-white py-3 px-4 rounded-xl font-bold text-xs shadow-lg shadow-[#096260]/20 transition-all duration-150 mt-2 cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'Authenticating...' : 'Authenticate Shield Instance'}
+            </button>
+
+            <div className="bg-[#082b36]/5 border border-[#096260]/5 p-4 rounded-2xl space-y-2">
+              <p className="text-[10px] text-[#096260] font-bold uppercase tracking-wider select-none">Credentials Checklist</p>
+              <div className="grid grid-cols-2 gap-3 text-[10px] text-[#082b36] font-mono leading-relaxed">
+                <div>
+                  <p className="font-bold text-[#096260]">Super Admin</p>
+                  <p className="mt-0.5">User: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">nstech</span></p>
+                  <p className="mt-0.5">Pass: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">Mweerasinghe@123#</span></p>
+                </div>
+                <div>
+                  <p className="font-bold text-[#096260]">Client Space</p>
+                  <p className="mt-0.5">User: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">sydney_deck</span></p>
+                  <p className="mt-0.5">Pass: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">sydney123</span></p>
+                </div>
+              </div>
             </div>
           </form>
         </div>
