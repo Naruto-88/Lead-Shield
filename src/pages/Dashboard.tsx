@@ -805,40 +805,62 @@ export default function Dashboard() {
 
     // Authenticate with Supabase and fetch user profile
     async function loadSupabaseSession() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Check if user exists in our users table using their Auth UUID
-        const { data: existingUser } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
 
-        if (existingUser) {
-          setLoggedInUser(existingUser as User);
-        } else {
-          // Auto-create as admin ONLY for the primary super admin
-          if (user.email === 'weerasinghemelaka@gmail.com') {
-            const { data: insertedUser, error } = await supabase
-              .from('profiles')
-              .insert({
-                id: user.id,
-                username: user.email,
-                role: 'admin',
-                client_id: null,
-              })
-              .select()
-              .single();
+        if (user) {
+          // Check if user exists in our users table using their Auth UUID
+          const { data: existingUser, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-            if (insertedUser) {
-               setLoggedInUser(insertedUser as User);
-            }
-          } else {
-            alert("Security Error: Your account was authenticated, but no valid profile was linked. Logging out.");
-            await supabase.auth.signOut();
-            setLoggedInUser(null);
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error("Profile fetch error:", profileError);
+            alert("Error fetching profile: " + profileError.message);
           }
+
+          if (existingUser) {
+            setLoggedInUser(existingUser as User);
+          } else {
+            // Auto-create as admin ONLY for the primary super admin
+            if (user.email === 'weerasinghemelaka@gmail.com') {
+              const { data: insertedUser, error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: user.id,
+                  username: user.email,
+                  role: 'admin',
+                  client_id: null,
+                })
+                .select()
+                .single();
+
+              if (insertError) {
+                alert("Failed to create admin profile. Supabase RLS might be blocking inserts. Error: " + insertError.message);
+                await supabase.auth.signOut();
+                window.location.href = '/login';
+                return;
+              }
+
+              if (insertedUser) {
+                 setLoggedInUser(insertedUser as User);
+              }
+            } else {
+              alert("Security Error: Your account was authenticated, but no valid profile was linked. Logging out.");
+              await supabase.auth.signOut();
+              window.location.href = '/login';
+            }
+          }
+        } else {
+           window.location.href = '/login';
         }
+      } catch (err: any) {
+        alert("Authentication failed: " + err.message);
+        await supabase.auth.signOut();
+        window.location.href = '/login';
       }
     }
     loadSupabaseSession();
