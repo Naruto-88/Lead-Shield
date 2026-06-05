@@ -1926,9 +1926,9 @@ export default function Dashboard() {
             {/* Context Header Helper */}
             <div className="bg-white rounded-3xl border border-[#096260]/5 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
               <div className="space-y-1.5">
-                <span className="inline-block bg-[#d5ecea] text-[#096260] text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">Simulation Mode</span>
+                <span className="inline-block bg-[#d5ecea] text-[#096260] text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">Live Workspace Access</span>
                 <p className="text-xs text-[#082b36]/70 leading-relaxed font-normal">
-                  This viewport emulates secure login protocols, multi-tenant role routers, and cPanel namespace visibility limits.
+                  Welcome to your secure Lead Shield portal. Review your incoming leads, AI filtering metrics, and performance analytics securely.
                 </p>
               </div>
 
