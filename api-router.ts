@@ -1,7 +1,6 @@
-import "dotenv/config";
 import express from "express";
 import { GoogleGenAI } from "@google/genai";
-import { supabase } from "./src/lib/supabase";
+import { supabase } from "./src/lib/supabase.js";
 import { createClient } from "@supabase/supabase-js";
 
 // Create Admin Client using Service Role Key to bypass RLS and create users securely
