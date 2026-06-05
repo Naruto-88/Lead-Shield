@@ -11,7 +11,8 @@ CREATE TABLE clients (
   has_seo BOOLEAN DEFAULT FALSE,
   has_google_ads BOOLEAN DEFAULT FALSE,
   has_fb_ads BOOLEAN DEFAULT FALSE,
-  has_gmb BOOLEAN DEFAULT FALSE
+  has_gmb BOOLEAN DEFAULT FALSE,
+  historical_spam_count INT DEFAULT 0
 );
 
 -- 2. Profiles (Links to Supabase Auth Users)
@@ -69,3 +70,31 @@ CREATE POLICY "Allow public read/write for profiles" ON profiles FOR ALL USING (
 CREATE POLICY "Allow public read/write for n8n_configs" ON n8n_configs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write for gmb_metrics" ON gmb_metrics FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write for leads" ON leads FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Postgres Trigger for Preserving Spam Counts
+-- When a spam lead is deleted (manually or by auto-cleanup), it increments the historical counter.
+CREATE OR REPLACE FUNCTION preserve_spam_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.status = 'SPAM' THEN
+    UPDATE clients SET historical_spam_count = historical_spam_count + 1 WHERE client_id = OLD.client_id;
+  END IF;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_preserve_spam_count ON leads;
+CREATE TRIGGER trigger_preserve_spam_count
+BEFORE DELETE ON leads
+FOR EACH ROW EXECUTE FUNCTION preserve_spam_count();
+
+-- 7. Postgres Function for 30-Day Auto Cleanup
+-- This function can be called via API or pg_cron to safely shred 30-day old spam leads
+CREATE OR REPLACE FUNCTION cleanup_old_spam()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM leads 
+  WHERE status = 'SPAM' 
+  AND created_at < NOW() - INTERVAL '30 days';
+END;
+$$ LANGUAGE plpgsql;

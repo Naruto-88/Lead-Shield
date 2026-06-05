@@ -58,6 +58,65 @@ app.post("/api/admin/create-client-user", async (req, res) => {
   }
 });
 
+// n8n Webhook Receiver Endpoint
+app.post("/api/webhook/lead", async (req, res) => {
+  const expectedApiKey = process.env.LEADSHIELD_API_KEY || "shield_lead_key_2026_secure";
+  const providedKey = req.headers["x-api-key"] || req.query.api_key;
+  
+  if (providedKey !== expectedApiKey) {
+    return res.status(401).json({ error: "Unauthorized access. Invalid API Key." });
+  }
+
+  const { client_id, contact_name, contact_email, contact_phone, service_requested, message, lead_score, is_spam, ai_summary, source } = req.body;
+
+  if (!client_id || !contact_name) {
+    return res.status(400).json({ error: "client_id and contact_name are required fields." });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.from("leads").insert({
+      client_id,
+      form_data: { contact_name, contact_email, contact_phone, service_requested, message, lead_score },
+      status: is_spam ? 'SPAM' : 'GENUINE',
+      ai_reason: ai_summary || '',
+      channel: source || 'n8n_webhook'
+    }).select().single();
+
+    if (error) throw error;
+    
+    return res.json({ success: true, message: "Lead received and safely stored in database.", lead: data });
+  } catch (err: any) {
+    console.error("Webhook processing error:", err.message);
+    return res.status(500).json({ error: "Internal server error while saving lead.", details: err.message });
+  }
+});
+
+// Admin endpoint to manually trigger 30-day spam auto-cleanup function in Postgres
+app.post("/api/admin/cleanup-spam", async (req, res) => {
+  try {
+    const { error } = await supabaseAdmin.rpc("cleanup_old_spam");
+    if (error) {
+      // If the RPC isn't deployed yet, fallback to manual node-side deletion
+      if (error.code === 'PGRST202') {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const { error: manualErr } = await supabaseAdmin
+          .from("leads")
+          .delete()
+          .eq("status", "spam")
+          .lt("created_at", thirtyDaysAgo.toISOString());
+          
+        if (manualErr) throw manualErr;
+        return res.json({ success: true, message: "Cleaned up old spam via manual query fallback." });
+      }
+      throw error;
+    }
+    return res.json({ success: true, message: "Successfully executed cleanup_old_spam Postgres function." });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Failed to execute cleanup." });
+  }
+});
+
 // Fetch all data from Supabase instead of local file
 app.get("/api/data", async (req, res) => {
   try {

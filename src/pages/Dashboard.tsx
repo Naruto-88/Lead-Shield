@@ -475,6 +475,7 @@ interface Client {
   has_google_ads?: boolean;
   has_fb_ads?: boolean;
   has_gmb?: boolean;
+  historical_spam_count?: number;
 }
 
 interface User {
@@ -1311,6 +1312,24 @@ export default function Dashboard() {
     alert("Client successfully deleted from the Database.");
   };
 
+  const handleRunSpamCleanup = async () => {
+    if (!confirm("Are you sure you want to delete all SPAM leads older than 30 days? This action cannot be undone.")) return;
+    try {
+      const res = await fetch("/api/admin/cleanup-spam", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        alert("Success: " + data.message);
+        // Refresh leads
+        const { data: leadsData } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+        if (leadsData) setLeads(leadsData);
+      } else {
+        alert("Cleanup Failed: " + data.error);
+      }
+    } catch (err: any) {
+      alert("System Error: " + err.message);
+    }
+  };
+
   const handleSaveN8nConfig = (e: React.FormEvent) => {
     e.preventDefault();
     setN8nConfigs(prev => {
@@ -1851,7 +1870,7 @@ export default function Dashboard() {
   // Statistics calculation helpers
   const totalLeadsAnalyzed = leads.length;
   const totalGenuineLeads = leads.filter(l => l.status === 'GENUINE').length;
-  const totalSpamBlocked = leads.filter(l => l.status === 'SPAM').length;
+  const totalSpamBlocked = leads.filter(l => l.status === 'SPAM').length + clients.reduce((sum, c) => sum + (c.historical_spam_count || 0), 0);
   const totalActiveClients = clients.filter(c => c.status === 'active').length;
 
   return (
@@ -1912,6 +1931,13 @@ export default function Dashboard() {
             className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'blueprint' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             📘 Deployment Blueprint
+          </button>
+          <div className="flex-1"></div>
+          <button
+            onClick={handleRunSpamCleanup}
+            className="text-xs font-bold px-4 py-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition duration-150 cursor-pointer flex items-center gap-1.5 shadow-md border border-red-500/30"
+          >
+            🧹 Run 30-Day Spam Auto-Cleanup
           </button>
         </div>
       )}
@@ -2096,7 +2122,7 @@ export default function Dashboard() {
                       
                       const clientLeads = leads.filter(l => l.client_id === adminInspectedClient);
                       const genuineLeadsCount = clientLeads.filter(l => l.status === 'GENUINE').length;
-                      const spamLeadsCount = clientLeads.filter(l => l.status === 'SPAM').length;
+                      const spamLeadsCount = clientLeads.filter(l => l.status === 'SPAM').length + (client.historical_spam_count || 0);
                       
                       return (
                         <div className="space-y-6">
@@ -2746,7 +2772,7 @@ export default function Dashboard() {
                       label: "Consolidated Feed",
                       desc: "Total combined omnichannel inbounds",
                       genuine: clientLeads.filter(l => l.status === 'GENUINE').length,
-                      spam: clientLeads.filter(l => l.status === 'SPAM').length,
+                      spam: clientLeads.filter(l => l.status === 'SPAM').length + (associatedClient?.historical_spam_count || 0),
                     },
                     website: {
                       label: "SEO Website Forms",
