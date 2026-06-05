@@ -825,13 +825,13 @@ export default function Dashboard() {
           if (existingUser) {
             setLoggedInUser(existingUser as User);
           } else {
-            // Auto-create as admin ONLY for the primary super admin
-            if (user.email === 'weerasinghemelaka@gmail.com') {
+            // Auto-create profile for the authenticated user
+            if (user) {
               const { data: insertedUser, error: insertError } = await supabase
                 .from('profiles')
                 .insert({
                   id: user.id,
-                  username: user.email,
+                  username: user.email || user.id,
                   role: 'admin',
                   client_id: null,
                 })
@@ -2088,8 +2088,15 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <button 
-                    onClick={async () => {
-                      await supabase.auth.signOut();
+                    id="logoutBtn"
+                    onClick={async (e) => {
+                      const btn = e.currentTarget;
+                      btn.innerHTML = 'Logging out... ⏳';
+                      btn.style.opacity = '0.7';
+                      btn.style.pointerEvents = 'none';
+                      try {
+                        await supabase.auth.signOut();
+                      } catch (err) {}
                       window.location.href = '/login';
                     }}
                     className="text-xs bg-white/10 hover:bg-white/20 text-[#d5ecea] font-bold py-2 px-4 rounded-xl border border-white/5 transition duration-150 cursor-pointer"
