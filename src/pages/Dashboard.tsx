@@ -1962,24 +1962,25 @@ export default function Dashboard() {
                     {loggedInUser.role === 'admin' && (
                       <div className="flex items-center gap-1.5 ml-2 border-l border-[#096260]/20 pl-3">
                         <span className="text-[9px] font-bold text-[#096260]/70 uppercase">Client Workspace Inspection:</span>
-                        <button 
-                          onClick={() => {
-                            setAdminInspectedClient('sydney_decking');
-                            setAdminInspectTab('genuine');
+                        <select
+                          value={adminInspectedClient || ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setAdminInspectedClient(e.target.value);
+                              setAdminInspectTab('genuine');
+                            } else {
+                              setAdminInspectedClient(null);
+                            }
                           }}
-                          className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition cursor-pointer shadow-xs ${adminInspectedClient === 'sydney_decking' ? 'bg-[#096260] text-white border-[#096260]' : 'bg-white/80 hover:bg-white text-[#082b36] border-[#096260]/10'}`}
+                          className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition cursor-pointer shadow-xs outline-none ${adminInspectedClient ? 'bg-[#096260] text-white border-[#096260]' : 'bg-white/80 hover:bg-white text-[#082b36] border-[#096260]/10'}`}
                         >
-                          Sydney Decking {adminInspectedClient === 'sydney_decking' ? '👁️' : '🔍'}
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setAdminInspectedClient('melbourne_renos');
-                            setAdminInspectTab('genuine');
-                          }}
-                          className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition cursor-pointer shadow-xs ${adminInspectedClient === 'melbourne_renos' ? 'bg-[#096260] text-white border-[#096260]' : 'bg-white/80 hover:bg-white text-[#082b36] border-[#096260]/10'}`}
-                        >
-                          Melbourne Renos {adminInspectedClient === 'melbourne_renos' ? '👁️' : '🔍'}
-                        </button>
+                          <option value="">-- Inspect Client Workspace --</option>
+                          {clients.map(c => (
+                            <option key={c.client_id} value={c.client_id}>
+                              {c.business_name} {c.status !== 'active' ? '(Inactive)' : ''}
+                            </option>
+                          ))}
+                        </select>
                         {adminInspectedClient && (
                           <button 
                             onClick={() => setAdminInspectedClient(null)}
