@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { 
   Shield, 
   Lock, 
@@ -800,6 +801,50 @@ export default function Dashboard() {
       }
     }
     loadRealData();
+
+    // Authenticate with Supabase and fetch user profile
+    async function loadSupabaseSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Check if user exists in our users table
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', user.email)
+          .single();
+
+        if (existingUser) {
+          setLoggedInUser(existingUser as User);
+        } else {
+          // Auto-create as admin for the first user
+          const newUser = {
+            id: user.id, // Or let UUID default generate depending on schema
+            email: user.email,
+            role: 'admin',
+            client_id: null,
+            username: 'nstech_admin'
+          };
+          
+          const { data: insertedUser, error } = await supabase
+            .from('users')
+            .insert({
+              email: user.email,
+              role: 'admin',
+              client_id: null,
+            })
+            .select()
+            .single();
+
+          if (insertedUser) {
+             setLoggedInUser({ ...insertedUser, username: insertedUser.email } as any);
+          } else {
+             // Fallback if table insertion fails
+             setLoggedInUser({ id: 1, username: 'nstech', role: 'admin', client_id: null });
+          }
+        }
+      }
+    }
+    loadSupabaseSession();
   }, []);
 
   // Poll server for live webhook transmissions dynamically every 3 seconds
@@ -1904,73 +1949,9 @@ export default function Dashboard() {
             {/* SECURITY WALL GATE - SHIELD UNRESTRICTED VISITORS */}
             {loggedInUser === null ? (
               <div className="flex-1 flex items-center justify-center py-10">
-                <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-[#096260]/5 overflow-hidden">
-                  
-                  {/* Branded login card header */}
-                  <div className="bg-[#082b36] p-8 text-center relative border-b border-white/5">
-                    <div className="mx-auto w-10 h-10 bg-[#096260] rounded-xl flex items-center justify-center border border-[#5fb4a9]/30">
-                      <div className="w-3.5 h-3.5 bg-white rounded-full"></div>
-                    </div>
-                    <h2 className="text-white text-xl font-bold tracking-tight mt-3">Lead Shield</h2>
-                    <p className="text-[#5fb4a9] text-[10px] uppercase tracking-[0.2em] mt-1 font-semibold">Secure Authenticator Wall</p>
-                  </div>
-
-                  <form onSubmit={handleFormLogin} className="p-8 space-y-4">
-                    
-                    {loginError && (
-                      <div className="bg-red-50 border border-red-500/10 text-red-950 p-4 rounded-2xl text-xs space-y-0.5 animate-pulse">
-                        <p className="font-bold">Access Denied</p>
-                        <p className="text-red-700/90 leading-tight">{loginError}</p>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-[#082b36] uppercase tracking-wider mb-1.5">Username / Login Handle</label>
-                      <input 
-                        type="text" 
-                        value={loginUsername}
-                        onChange={(e) => setLoginUsername(e.target.value)}
-                        placeholder="nstech  OR  sydney_deck"
-                        required
-                        className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2.5 px-3.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#096260] text-[#082b36] placeholder-[#082b36]/35 font-medium"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-[#082b36] uppercase tracking-wider mb-1.5">Secure Keyphrase Password</label>
-                      <input 
-                        type="password" 
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="Any text allowed to bypass in simulator"
-                        required
-                        className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2.5 px-3.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#096260] text-[#082b36] placeholder-[#082b36]/40 font-medium"
-                      />
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="w-full bg-[#096260] hover:bg-[#5fb4a9] text-white py-3 px-4 rounded-xl font-bold text-xs shadow-lg shadow-[#096260]/20 transition-all duration-150 mt-2 cursor-pointer"
-                    >
-                      Authenticate Shield Instance
-                    </button>
-
-                    <div className="bg-[#082b36]/5 border border-[#096260]/5 p-4 rounded-2xl space-y-2">
-                      <p className="text-[10px] text-[#096260] font-bold uppercase tracking-wider select-none">Credentials Checklist</p>
-                      <div className="grid grid-cols-2 gap-3 text-[10px] text-[#082b36] font-mono leading-relaxed">
-                        <div>
-                          <p className="font-bold text-[#096260]">Super Admin</p>
-                          <p className="mt-0.5">User: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">nstech</span></p>
-                          <p className="mt-0.5">Pass: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">Mweerasinghe@123#</span></p>
-                        </div>
-                        <div>
-                          <p className="font-bold text-[#096260]">Client Space</p>
-                          <p className="mt-0.5">User: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">sydney_deck</span></p>
-                          <p className="mt-0.5">Pass: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">sydney123</span></p>
-                        </div>
-                      </div>
-                    </div>
-                  </form>
+                <div className="animate-pulse flex flex-col items-center">
+                  <div className="h-12 w-12 border-4 border-[#096260] border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <div className="text-[#082b36] font-bold text-sm tracking-wider">Syncing Secure Roles...</div>
                 </div>
               </div>
             ) : loggedInUser.role === 'admin' ? (
@@ -1989,7 +1970,10 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <button 
-                    onClick={() => setLoggedInUser(null)}
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      window.location.href = '/login';
+                    }}
                     className="text-xs bg-white/10 hover:bg-white/20 text-[#d5ecea] font-bold py-2 px-4 rounded-xl border border-white/5 transition duration-150 cursor-pointer"
                   >
                     Logout System Gateway 🚪
