@@ -1,0 +1,6 @@
+{
+  "name": "Lead Shield",
+  "description": "Multi-Tenant Lead Management and AI Filtering Dashboard with central webhook receiver, Super Admin panel, and separate Client portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

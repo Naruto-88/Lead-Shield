@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch;
+          var currentFetch = originalFetch;
+          
+          function defineFetch(obj) {
+            if (!obj) return;
+            Object.defineProperty(obj, 'fetch', {
+              configurable: true,
+              enumerable: true,
+              get: function() {
+                return currentFetch;
+              },
+              set: function(val) {
+                currentFetch = val;
+              }
+            });
+          }
+          
+          defineFetch(window);
+          if (typeof globalThis !== 'undefined') {
+            defineFetch(globalThis);
+          }
+          if (typeof self !== 'undefined') {
+            defineFetch(self);
+          }
+        } catch (e) {
+          console.warn('Silent polyfill for fetch setter encountered error:', e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
