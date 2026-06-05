@@ -78,21 +78,7 @@ export default function Login() {
               {loading ? 'Authenticating...' : 'Authenticate Shield Instance'}
             </button>
 
-            <div className="bg-[#082b36]/5 border border-[#096260]/5 p-4 rounded-2xl space-y-2">
-              <p className="text-[10px] text-[#096260] font-bold uppercase tracking-wider select-none">Credentials Checklist</p>
-              <div className="grid grid-cols-2 gap-3 text-[10px] text-[#082b36] font-mono leading-relaxed">
-                <div>
-                  <p className="font-bold text-[#096260]">Super Admin</p>
-                  <p className="mt-0.5">User: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">nstech</span></p>
-                  <p className="mt-0.5">Pass: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">Mweerasinghe@123#</span></p>
-                </div>
-                <div>
-                  <p className="font-bold text-[#096260]">Client Space</p>
-                  <p className="mt-0.5">User: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">sydney_deck</span></p>
-                  <p className="mt-0.5">Pass: <span className="bg-[#d5ecea] text-[#096260] px-1 font-bold rounded">sydney123</span></p>
-                </div>
-              </div>
-            </div>
+
           </form>
         </div>
       </div>
