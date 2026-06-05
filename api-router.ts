@@ -5,13 +5,16 @@ import { supabase } from "./src/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 
 // Create Admin Client using Service Role Key to bypass RLS and create users securely
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://missing-env-var.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "missing-key";
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 export const apiRouter = express.Router();
 
-apiRouter.use(express.json());
+apiRouter.use((req, res, next) => {
+  if (req.body && Object.keys(req.body).length > 0) return next();
+  express.json()(req, res, next);
+});
 apiRouter.use(express.urlencoded({ extended: true }));
 
 apiRouter.use((req, res, next) => {
@@ -109,6 +112,9 @@ apiRouter.post("/api/admin/cleanup-spam", async (req, res) => {
 
 // Fetch all data from Supabase instead of local file
 apiRouter.get("/api/data", async (req, res) => {
+  if (SUPABASE_URL.includes("missing-env-var")) {
+    return res.status(500).json({ error: "Backend Env Vars Missing: VITE_SUPABASE_URL is not configured in Vercel" });
+  }
   try {
     const [ { data: clients }, { data: n8nConfigs }, { data: gmbMetrics }, { data: leads }, { data: profiles } ] = await Promise.all([
       supabase.from("clients").select("*"),
@@ -118,8 +124,8 @@ apiRouter.get("/api/data", async (req, res) => {
       supabase.from("profiles").select("*")
     ]);
     res.json({ clients: clients || [], users: profiles || [], gmbMetrics: gmbMetrics || [], n8nConfigs: n8nConfigs || [], leads: leads || [] });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch data" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to fetch data", details: err.message });
   }
 });
 

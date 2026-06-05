@@ -11,8 +11,8 @@ const getEnv = (key: string) => {
   return '';
 };
 
-const supabaseUrl = getEnv('VITE_SUPABASE_URL') || '';
-const supabaseKey = getEnv('VITE_SUPABASE_ANON_KEY') || '';
+const supabaseUrl = getEnv('VITE_SUPABASE_URL') || 'https://missing-env-var.supabase.co';
+const supabaseKey = getEnv('VITE_SUPABASE_ANON_KEY') || 'missing-key';
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Supabase credentials not found. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in .env');
