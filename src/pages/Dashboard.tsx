@@ -2785,7 +2785,7 @@ export default function Dashboard() {
                       label: "Consolidated Feed",
                       desc: "Total combined omnichannel inbounds",
                       genuine: clientLeads.filter(l => l.status === 'GENUINE').length,
-                      spam: clientLeads.filter(l => l.status === 'SPAM').length + (associatedClient?.historical_spam_count || 0),
+                      spam: clientLeads.filter(l => l.status === 'SPAM').length + (clientObj?.historical_spam_count || 0),
                     },
                     website: {
                       label: "SEO Website Forms",
