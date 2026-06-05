@@ -1121,61 +1121,45 @@ export default function Dashboard() {
   };
 
   // Client crud actions
-  const handleCreateTenant = (e: React.FormEvent) => {
+  const handleCreateNewClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBizName || !newBizEmail || !newBizUsername || !newBizPassword) {
-      alert("All fields are strictly required.");
-      return;
-    }
 
     const t_id = newBizName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_');
     
-    // Check if client_id already taken
-    if (clients.some(c => c.client_id === t_id)) {
+    // Check if client_id already taken in DB
+    const { data: existingClient } = await supabase.from('clients').select('client_id').eq('client_id', t_id).single();
+    if (existingClient) {
       alert(`The Client ID token '${t_id}' is already taken. Try altering the business name.`);
       return;
     }
 
-    if (users.some(u => u.username === newBizUsername)) {
-      alert(`Username '${newBizUsername}' is taken. Please select different portal credentials.`);
+    const { data: existingProfile } = await supabase.from('profiles').select('username').eq('username', newBizUsername).single();
+    if (existingProfile) {
+      alert(`Email/Username '${newBizUsername}' is taken. Please select different portal credentials.`);
       return;
     }
 
-    const nextClientId = clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1;
-    const nextUserId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-
-    const newClient: Client = {
-      id: nextClientId,
+    // Insert into Supabase
+    const { error: clientError } = await supabase.from('clients').insert({
       client_id: t_id,
       business_name: newBizName,
       contact_email: newBizEmail,
       status: 'active',
-      created_at: new Date().toISOString().replace('T', ' ').slice(0, 19),
       has_seo: newBizHasSeo,
       has_google_ads: newBizHasGoogleAds,
       has_fb_ads: newBizHasFbAds,
       has_gmb: newBizHasGmb
-    };
+    });
 
-    const newUser: User = {
-      id: nextUserId,
-      username: newBizUsername,
-      role: 'client',
-      client_id: t_id
-    };
+    if (clientError) {
+      alert(`Failed to create client: ${clientError.message}`);
+      return;
+    }
 
-    setClients(prev => [...prev, newClient]);
-    setUsers(prev => [...prev, newUser]);
-
-    const newN8nConfig: ClientN8NConfig = {
+    const newN8nConfig = {
       client_id: t_id,
-      gemini_prompt: `You are the primary spam filter for ${newBizName}. Analyze the following details. If it is a real customer query about service rates, scheduling, or actual project inquiries, categorize as GENUINE. If it is advertisement, SEO requests, backlink pitches, cryptocurrency blogs, generic greetings without context, or slot link insertions, categorize as SPAM. Report as JSON: { "verdict": "GENUINE" | "SPAM", "reason": "Detailed analytical logic..." }`,
-      gemini_models: [
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash"
-      ],
+      gemini_prompt: `You are the primary spam filter for ${newBizName}. Analyze the following details...`,
+      gemini_models: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash"],
       openai_enabled: true,
       openai_prompt: `Final safeguard check for ${newBizName}. Filter the incoming message. Report as JSON with verdict.`,
       genuine_recipient_email: newBizEmail,
@@ -1183,7 +1167,25 @@ export default function Dashboard() {
       webhook_url: `https://your-n8n.public_html/webhook/${t_id}_leads`
     };
 
-    setN8nConfigs(prev => [...prev, newN8nConfig]);
+    await supabase.from('n8n_configs').insert(newN8nConfig);
+
+    // Also insert a dummy profile record so the link exists, though actual Auth user needs to be created in Supabase Dashboard
+    await supabase.from('profiles').insert({
+      username: newBizUsername,
+      role: 'client',
+      client_id: t_id
+    });
+
+    alert(`Client workspace '${newBizName}' created successfully!\n\nIMPORTANT: To allow the client to log in, you must now go to your Supabase Dashboard -> Authentication -> Add User and create an account with the email: ${newBizUsername}`);
+
+    // Fetch fresh data from API
+    const res = await fetch('/api/data');
+    if (res.ok) {
+      const fetched = await res.json();
+      if (fetched.clients) setClients(fetched.clients);
+      if (fetched.users) setUsers(fetched.users);
+      if (fetched.n8nConfigs) setN8nConfigs(fetched.n8nConfigs);
+    }
 
     setNewBizName('');
     setNewBizEmail('');
@@ -1193,8 +1195,7 @@ export default function Dashboard() {
     setNewBizHasGoogleAds(false);
     setNewBizHasFbAds(false);
     setNewBizHasGmb(false);
-
-    alert(`Successfully provisioned space '${newClient.business_name}' and generated n8n integration workflow templates! Portal is live.`);
+    setShowNewClientModal(false);
   };
 
   const handleToggleClientStatus = (clientId: string) => {
@@ -2365,25 +2366,23 @@ export default function Dashboard() {
                       <div className="border-t border-gray-100 pt-4 flex flex-col space-y-3">
                         <p className="text-[10px] text-[#096260] font-bold uppercase tracking-widest font-mono">WORKSPACE AUTHENTIALS</p>
                         <div>
-                          <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Portal Username</label>
+                          <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Portal Login Email</label>
                           <input 
-                            type="text" 
+                            type="email" 
                             value={newBizUsername}
                             onChange={(e) => setNewBizUsername(e.target.value)}
-                            placeholder="e.g. brisbane_deck" 
+                            placeholder="e.g. client@brisdeck.com" 
                             required
                             className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-[#082b36] outline-none font-mono"
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Access Password</label>
+                          <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 opacity-50">Access Password (Set in Supabase)</label>
                           <input 
                             type="password" 
-                            value={newBizPassword}
-                            onChange={(e) => setNewBizPassword(e.target.value)}
-                            placeholder="••••••••" 
-                            required
-                            className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-[#082b36] outline-none"
+                            disabled
+                            placeholder="Create user in Supabase Auth Dashboard" 
+                            className="w-full bg-gray-100 border border-gray-200 rounded-xl py-2 px-3 text-xs text-gray-400 outline-none cursor-not-allowed"
                           />
                         </div>
                       </div>
