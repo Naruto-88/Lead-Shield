@@ -71,6 +71,34 @@ app.post("/api/admin/create-client-user", async (req, res) => {
   }
 });
 
+// Delete Auth User securely using Admin Service Key
+app.post("/api/admin/delete-client-user", async (req, res) => {
+  const { client_id } = req.body;
+  if (!client_id) return res.status(400).json({ error: "client_id is required" });
+  
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: "Service Role Key missing." });
+  }
+
+  try {
+    // 1. Get profile to find the auth UUID
+    const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('client_id', client_id).single();
+    
+    // If we have a profile linked to this client, delete the Auth user
+    if (profile && profile.id) {
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+      if (error) {
+        console.error("Supabase Admin Delete User Error:", error.message);
+        return res.status(500).json({ error: error.message });
+      }
+    }
+    
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
+});
+
 // n8n Webhook Receiver Endpoint
 app.post("/api/webhook/lead", async (req, res) => {
   const expectedApiKey = process.env.LEADSHIELD_API_KEY || "shield_lead_key_2026_secure";

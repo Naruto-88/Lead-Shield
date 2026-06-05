@@ -1291,7 +1291,18 @@ export default function Dashboard() {
       return;
     }
 
-    // Delete from Supabase Database
+    // 1. Delete Auth User via Backend Admin Service
+    try {
+      await fetch('/api/admin/delete-client-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: clientId })
+      });
+    } catch (e) {
+      console.warn("Failed to reach backend to delete Auth user", e);
+    }
+
+    // 2. Delete Client records from Database
     const { error } = await supabase.from('clients').delete().eq('client_id', clientId);
     
     if (error) {
@@ -1299,13 +1310,13 @@ export default function Dashboard() {
       return;
     }
 
-    // Also try to delete their profile (since cascading might just SET NULL)
+    // Profiles are cascading, but just in case, we can attempt to clean up
     await supabase.from('profiles').delete().eq('client_id', clientId);
 
     setClients(prev => prev.filter(c => c.client_id !== clientId));
     setLeads(prev => prev.filter(l => l.client_id !== clientId));
     setUsers(prev => prev.filter(u => u.client_id !== clientId));
-    alert("Client successfully deleted from the Database.");
+    alert("Client and Portal Login successfully deleted from the Database.");
   };
 
   const handleRunSpamCleanup = async () => {
