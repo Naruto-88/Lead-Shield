@@ -808,7 +808,7 @@ export default function Dashboard() {
       if (user) {
         // Check if user exists in our users table
         const { data: existingUser } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('email', user.email)
           .single();
@@ -826,7 +826,7 @@ export default function Dashboard() {
           };
           
           const { data: insertedUser, error } = await supabase
-            .from('users')
+            .from('profiles')
             .insert({
               email: user.email,
               role: 'admin',
