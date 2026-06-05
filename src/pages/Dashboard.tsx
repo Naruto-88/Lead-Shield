@@ -1291,7 +1291,8 @@ export default function Dashboard() {
   };
 
   const handleDeleteClient = async (clientId: string) => {
-    if (!confirm("CRITICAL WARNING: Deleting this client tenant will permanently shred all user portals and leads records from the system database. Proceed?")) {
+    const isConfirmed = await window.confirm("CRITICAL WARNING: Deleting this client tenant will permanently shred all user portals and leads records from the system database. Proceed?");
+    if (!isConfirmed) {
       return;
     }
 
@@ -1313,7 +1314,8 @@ export default function Dashboard() {
   };
 
   const handleRunSpamCleanup = async () => {
-    if (!confirm("Are you sure you want to delete all SPAM leads older than 30 days? This action cannot be undone.")) return;
+    const isConfirmed = await window.confirm("Are you sure you want to delete all SPAM leads older than 30 days? This action cannot be undone.");
+    if (!isConfirmed) return;
     try {
       const res = await fetch("/api/admin/cleanup-spam", { method: "POST" });
       const data = await res.json();
@@ -1523,8 +1525,9 @@ export default function Dashboard() {
     alert(`Successfully stored GMB metrics: ${clicks} call-button clicks entered for ${gmbMonthInput} ${gmbYearInput}!`);
   };
 
-  const handleDeleteGmbMetric = (metricId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this manual GMB monthly click entry?")) {
+  const handleDeleteGmbMetric = async (metricId: string) => {
+    const isConfirmed = await window.confirm("Are you sure you want to permanently delete this manual GMB monthly click entry?");
+    if (!isConfirmed) {
       return;
     }
     setGmbMetrics(prev => prev.filter(m => m.id !== metricId));

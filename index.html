@@ -92,6 +92,59 @@
         }, 8000);
       };
 
+      // Global Native Confirm Override for Premium Theme
+      window.confirm = function(message) {
+        return new Promise((resolve) => {
+          var overlay = document.createElement('div');
+          overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999999; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s ease; backdrop-filter:blur(6px); font-family:ui-sans-serif, system-ui, sans-serif;";
+          
+          var modal = document.createElement('div');
+          var isCritical = message.toLowerCase().includes("critical") || message.toLowerCase().includes("permanently");
+          var themeColor = isCritical ? "#ef4444" : "#eab308";
+          var themeBg = isCritical ? "rgba(239, 68, 68, 0.2)" : "rgba(234, 179, 8, 0.2)";
+          var themeBorder = isCritical ? "rgba(239, 68, 68, 0.4)" : "rgba(234, 179, 8, 0.4)";
+          var title = isCritical ? "CRITICAL ACTION" : "Confirm Action";
+          
+          modal.style.cssText = "background:#082b36; border:1px solid " + themeBorder + "; padding:24px; border-radius:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); max-width:400px; width:90%; transform:scale(0.95) translateY(20px); opacity:0; transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);";
+          
+          modal.innerHTML = `
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+              <div style="background:${themeBg}; padding:10px; border-radius:14px; flex-shrink:0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${themeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <h3 style="color:#d5ecea; font-weight:800; font-size:18px; margin:0; letter-spacing:0.5px; text-transform:uppercase;">${title}</h3>
+            </div>
+            <p style="color:#5fb4a9; font-size:14px; font-weight:500; margin-top:0; margin-bottom:24px; line-height:1.6;">${message}</p>
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+              <button id="confirm-cancel" style="background:transparent; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); padding:10px 20px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:12px; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">Cancel</button>
+              <button id="confirm-ok" style="background:${themeBg}; border:1px solid ${themeBorder}; color:${themeColor}; padding:10px 20px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:12px; transition:all 0.2s;" onmouseover="this.style.background='${themeColor}'; this.style.color='#fff';" onmouseout="this.style.background='${themeBg}'; this.style.color='${themeColor}';">Yes, Proceed</button>
+            </div>
+          `;
+          
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          
+          requestAnimationFrame(() => {
+            overlay.style.opacity = "1";
+            modal.style.transform = "scale(1) translateY(0)";
+            modal.style.opacity = "1";
+          });
+          
+          const close = (val) => {
+            overlay.style.opacity = "0";
+            modal.style.transform = "scale(0.95) translateY(20px)";
+            modal.style.opacity = "0";
+            setTimeout(() => {
+              overlay.remove();
+              resolve(val);
+            }, 300);
+          };
+          
+          modal.querySelector('#confirm-cancel').onclick = () => close(false);
+          modal.querySelector('#confirm-ok').onclick = () => close(true);
+        });
+      };
+
       window.onerror = function(message, source, lineno, colno, error) {
         var errDiv = document.createElement('div');
         errDiv.style = "position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:999999;padding:20px;font-family:monospace;white-space:pre-wrap;";
