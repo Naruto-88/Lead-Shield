@@ -2776,7 +2776,17 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => setLoggedInUser(null)}
+                    id="clientLogoutBtn"
+                    onClick={async (e) => {
+                      const btn = e.currentTarget;
+                      btn.innerHTML = 'Signing out... ⏳';
+                      btn.style.opacity = '0.7';
+                      btn.style.pointerEvents = 'none';
+                      try {
+                        await supabase.auth.signOut();
+                      } catch (err) {}
+                      window.location.href = '/login';
+                    }}
                     className="text-xs bg-white/10 hover:bg-white/20 text-[#d5ecea] font-bold py-2.5 px-4 rounded-xl border border-white/5 transition duration-150 cursor-pointer"
                   >
                     Portal Exit Secure Signout 🚪
