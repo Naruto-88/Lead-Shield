@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 
 // Create Auth User securely using Admin Service Key (so the Admin isn't logged out)
 app.post("/api/admin/create-client-user", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, client_id, role } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
@@ -50,6 +50,19 @@ app.post("/api/admin/create-client-user", async (req, res) => {
     if (error) {
       console.error("Supabase Admin Create User Error:", error.message);
       return res.status(400).json({ error: error.message });
+    }
+    
+    // Securely link Auth ID to Profiles table
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+      id: data.user.id,
+      username: email,
+      role: role || 'client',
+      client_id: client_id || null
+    });
+
+    if (profileError) {
+      console.error("Profile Link Error:", profileError.message);
+      return res.status(500).json({ error: "Auth created but failed to link profile: " + profileError.message });
     }
     
     return res.json({ success: true, user: data.user });

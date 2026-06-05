@@ -807,40 +807,36 @@ export default function Dashboard() {
     async function loadSupabaseSession() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Check if user exists in our users table
+        // Check if user exists in our users table using their Auth UUID
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('*')
-          .eq('email', user.email)
+          .eq('id', user.id)
           .single();
 
         if (existingUser) {
           setLoggedInUser(existingUser as User);
         } else {
-          // Auto-create as admin for the first user
-          const newUser = {
-            id: user.id, // Or let UUID default generate depending on schema
-            email: user.email,
-            role: 'admin',
-            client_id: null,
-            username: 'nstech_admin'
-          };
-          
-          const { data: insertedUser, error } = await supabase
-            .from('profiles')
-            .insert({
-              email: user.email,
-              role: 'admin',
-              client_id: null,
-            })
-            .select()
-            .single();
+          // Auto-create as admin ONLY for the primary super admin
+          if (user.email === 'weerasinghemelaka@gmail.com') {
+            const { data: insertedUser, error } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                username: user.email,
+                role: 'admin',
+                client_id: null,
+              })
+              .select()
+              .single();
 
-          if (insertedUser) {
-             setLoggedInUser({ ...insertedUser, username: insertedUser.email } as any);
+            if (insertedUser) {
+               setLoggedInUser(insertedUser as User);
+            }
           } else {
-             // Fallback if table insertion fails
-             setLoggedInUser({ id: 1, username: 'nstech', role: 'admin', client_id: null });
+            alert("Security Error: Your account was authenticated, but no valid profile was linked. Logging out.");
+            await supabase.auth.signOut();
+            setLoggedInUser(null);
           }
         }
       }
@@ -1160,11 +1156,17 @@ export default function Dashboard() {
     }
 
     // Attempt to create Supabase Auth User via secure backend endpoint
+    // This will securely create the Auth user and link it directly into the profiles table
     try {
       const authResponse = await fetch('/api/admin/create-client-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newBizUsername, password: newBizPassword })
+        body: JSON.stringify({ 
+          email: newBizUsername, 
+          password: newBizPassword,
+          client_id: t_id,
+          role: 'client'
+        })
       });
       
       const authResult = await authResponse.json();
@@ -1187,13 +1189,6 @@ export default function Dashboard() {
     };
 
     await supabase.from('n8n_configs').insert(newN8nConfig);
-
-    // Also insert a dummy profile record so the link exists, though actual Auth user needs to be created in Supabase Dashboard
-    await supabase.from('profiles').insert({
-      username: newBizUsername,
-      role: 'client',
-      client_id: t_id
-    });
 
     alert(`Client workspace '${newBizName}' created securely!\n\nThe portal login for this client is now instantly active with the email: ${newBizUsername}`);
 
