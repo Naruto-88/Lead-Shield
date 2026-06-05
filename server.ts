@@ -4,6 +4,12 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { supabase } from "./src/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+// Create Admin Client using Service Role Key to bypass RLS and create users securely
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 
 
@@ -21,6 +27,35 @@ app.use((req, res, next) => {
     return res.sendStatus(200);
   }
   next();
+});
+
+// Create Auth User securely using Admin Service Key (so the Admin isn't logged out)
+app.post("/api/admin/create-client-user", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+  
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: "Service Role Key is missing in backend configuration." });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true // Auto confirm their email so they can login immediately
+    });
+
+    if (error) {
+      console.error("Supabase Admin Create User Error:", error.message);
+      return res.status(400).json({ error: error.message });
+    }
+    
+    return res.json({ success: true, user: data.user });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
 });
 
 // Fetch all data from Supabase instead of local file

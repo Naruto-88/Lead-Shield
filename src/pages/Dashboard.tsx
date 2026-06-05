@@ -1152,8 +1152,24 @@ export default function Dashboard() {
     });
 
     if (clientError) {
-      alert(`Failed to create client: ${clientError.message}`);
+      alert(`Failed to create client workspace: ${clientError.message}`);
       return;
+    }
+
+    // Attempt to create Supabase Auth User via secure backend endpoint
+    try {
+      const authResponse = await fetch('/api/admin/create-client-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newBizUsername, password: newBizPassword })
+      });
+      
+      const authResult = await authResponse.json();
+      if (!authResponse.ok || authResult.error) {
+        alert(`Workspace created, but could not create Auth login: ${authResult.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      alert("Failed to connect to backend Auth service. Client created, but login not generated.");
     }
 
     const newN8nConfig = {
@@ -1176,7 +1192,7 @@ export default function Dashboard() {
       client_id: t_id
     });
 
-    alert(`Client workspace '${newBizName}' created successfully!\n\nIMPORTANT: To allow the client to log in, you must now go to your Supabase Dashboard -> Authentication -> Add User and create an account with the email: ${newBizUsername}`);
+    alert(`Client workspace '${newBizName}' created securely!\n\nThe portal login for this client is now instantly active with the email: ${newBizUsername}`);
 
     // Fetch fresh data from API
     const res = await fetch('/api/data');
@@ -2377,12 +2393,14 @@ export default function Dashboard() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 opacity-50">Access Password (Set in Supabase)</label>
+                          <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Access Password</label>
                           <input 
                             type="password" 
-                            disabled
-                            placeholder="Create user in Supabase Auth Dashboard" 
-                            className="w-full bg-gray-100 border border-gray-200 rounded-xl py-2 px-3 text-xs text-gray-400 outline-none cursor-not-allowed"
+                            value={newBizPassword}
+                            onChange={(e) => setNewBizPassword(e.target.value)}
+                            placeholder="••••••••" 
+                            required
+                            className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-[#082b36] outline-none"
                           />
                         </div>
                       </div>
