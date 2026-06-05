@@ -1997,25 +1997,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap items-center gap-2.5 bg-[#d5ecea]/35 p-3 rounded-2xl border border-[#096260]/5 animate-fade-in">
                 {loggedInUser === null ? (
                   <>
-                    <span className="text-[10px] uppercase font-bold text-[#096260]/80 tracking-widest pl-1 select-none">Quick Test Profiles:</span>
-                    <button 
-                      onClick={() => setLoggedInUser({ id: 1, username: 'nstech', role: 'admin', client_id: null })}
-                      className="bg-[#082b36] hover:bg-[#096260] text-white text-[10px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-sm hover:translate-y-[-1px] duration-150"
-                    >
-                      Super Admin (nstech)
-                    </button>
-                    <button 
-                      onClick={() => setLoggedInUser({ id: 2, username: 'sydney_deck', role: 'client', client_id: 'sydney_decking' })}
-                      className="bg-white hover:bg-gray-50 border border-[#096260]/10 text-[#082b36] text-[10px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-sm hover:translate-y-[-1px] duration-150"
-                    >
-                      Sydney Decking
-                    </button>
-                    <button 
-                      onClick={() => setLoggedInUser({ id: 3, username: 'melb_renos', role: 'client', client_id: 'melbourne_renos' })}
-                      className="bg-white hover:bg-gray-50 border border-[#096260]/10 text-[#082b36] text-[10px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-sm hover:translate-y-[-1px] duration-150"
-                    >
-                      Melbourne Renos
-                    </button>
+                    <span className="text-[10px] uppercase font-bold text-[#096260]/80 tracking-widest pl-1 select-none">Checking Session Security...</span>
                   </>
                 ) : (
                   <>
