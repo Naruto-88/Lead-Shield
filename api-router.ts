@@ -5,8 +5,8 @@ import { supabase } from "./src/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 
 // Create Admin Client using Service Role Key to bypass RLS and create users securely
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://missing-env-var.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "missing-key";
+const SUPABASE_URL = process.env.leadshield_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://missing-env-var.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.leadshield_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "missing-key";
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 export const apiRouter = express.Router();
