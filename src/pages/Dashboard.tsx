@@ -1211,7 +1211,6 @@ export default function Dashboard() {
     setNewBizHasGoogleAds(false);
     setNewBizHasFbAds(false);
     setNewBizHasGmb(false);
-    setShowNewClientModal(false);
   };
 
   const handleToggleClientStatus = async (clientId: string) => {
