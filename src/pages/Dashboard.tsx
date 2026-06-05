@@ -1956,6 +1956,10 @@ export default function Dashboard() {
                 <p className="text-xs text-[#082b36]/70 leading-relaxed font-normal">
                   Welcome to your secure Lead Shield portal. Review your incoming leads, AI filtering metrics, and performance analytics securely.
                 </p>
+                <div className="mt-2.5 flex items-center gap-2 text-[10px] text-[#096260] bg-[#d5ecea]/40 w-max px-3 py-1.5 rounded-lg border border-[#096260]/10 font-bold shadow-sm">
+                  <span className="text-sm">🤖</span>
+                  <span>AI Spam Filtering Accuracy: ~99.9%. Please review the Spam folder occasionally as no AI is 100% perfect.</span>
+                </div>
               </div>
 
               {/* Quick Login Accounts to accelerate user tests (Confined strictly by active session permissions) */}
