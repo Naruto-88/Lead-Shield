@@ -92,15 +92,6 @@ export default function Login() {
                 {!loading && <ArrowRight className="ml-2 h-5 w-5" />}
               </button>
             </div>
-
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <Link to="/signup" className="font-medium text-[#096260] hover:text-[#5fb4a9]">
-                  Sign up here
-                </Link>
-              </p>
-            </div>
           </form>
         </div>
       </div>
