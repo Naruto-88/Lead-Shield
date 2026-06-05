@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -90,6 +91,15 @@ export default function Login() {
                 {loading ? 'Authenticating...' : 'Sign In'}
                 {!loading && <ArrowRight className="ml-2 h-5 w-5" />}
               </button>
+            </div>
+
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link to="/signup" className="font-medium text-[#096260] hover:text-[#5fb4a9]">
+                  Sign up here
+                </Link>
+              </p>
             </div>
           </form>
         </div>
