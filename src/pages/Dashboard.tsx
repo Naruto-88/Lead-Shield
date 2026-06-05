@@ -2354,7 +2354,7 @@ export default function Dashboard() {
                     <h3 className="text-sm font-extrabold text-[#082b36] mb-1">Onboard New Tenant Client</h3>
                     <p className="text-xs text-gray-400 mb-5">Provision isolated workspaces and router access keys automatically</p>
 
-                    <form onSubmit={handleCreateTenant} className="space-y-4">
+                    <form onSubmit={handleCreateNewClient} className="space-y-4">
                       <div>
                         <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Business Brand Name</label>
                         <input 
