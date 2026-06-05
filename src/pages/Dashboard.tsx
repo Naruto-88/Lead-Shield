@@ -991,6 +991,8 @@ export default function Dashboard() {
 
   // Admin client workspace inspection state without logging out
   const [adminInspectedClient, setAdminInspectedClient] = useState<string | null>(null);
+  const [adminClientSearch, setAdminClientSearch] = useState('');
+  const [showAdminClientSearch, setShowAdminClientSearch] = useState(false);
   const [adminInspectTab, setAdminInspectTab] = useState<'genuine' | 'spam'>('genuine');
 
   // Synchronization with browser cache and server backend
@@ -1962,25 +1964,42 @@ export default function Dashboard() {
                     {loggedInUser.role === 'admin' && (
                       <div className="flex items-center gap-1.5 ml-2 border-l border-[#096260]/20 pl-3">
                         <span className="text-[9px] font-bold text-[#096260]/70 uppercase">Client Workspace Inspection:</span>
-                        <select
-                          value={adminInspectedClient || ""}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setAdminInspectedClient(e.target.value);
-                              setAdminInspectTab('genuine');
-                            } else {
-                              setAdminInspectedClient(null);
-                            }
-                          }}
-                          className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition cursor-pointer shadow-xs outline-none ${adminInspectedClient ? 'bg-[#096260] text-white border-[#096260]' : 'bg-white/80 hover:bg-white text-[#082b36] border-[#096260]/10'}`}
-                        >
-                          <option value="">-- Inspect Client Workspace --</option>
-                          {clients.map(c => (
-                            <option key={c.client_id} value={c.client_id}>
-                              {c.business_name} {c.status !== 'active' ? '(Inactive)' : ''}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search workspace..."
+                            value={adminInspectedClient ? (clients.find(c => c.client_id === adminInspectedClient)?.business_name || adminClientSearch) : adminClientSearch}
+                            onChange={(e) => {
+                              setAdminClientSearch(e.target.value);
+                              if (adminInspectedClient) setAdminInspectedClient(null);
+                            }}
+                            onFocus={() => setShowAdminClientSearch(true)}
+                            onBlur={() => setTimeout(() => setShowAdminClientSearch(false), 200)}
+                            className={`text-[9px] font-bold px-3 py-1.5 rounded-lg border transition shadow-xs outline-none w-56 ${adminInspectedClient ? 'bg-[#096260] text-white border-[#096260]' : 'bg-white/80 hover:bg-white text-[#082b36] border-[#096260]/10'}`}
+                          />
+                          {showAdminClientSearch && (
+                            <div className="absolute top-full mt-1 left-0 w-full max-h-48 overflow-y-auto bg-white border border-[#096260]/10 rounded-xl shadow-xl z-50 py-1 scrollbar">
+                              {clients.filter(c => c.business_name.toLowerCase().includes(adminClientSearch.toLowerCase())).length === 0 ? (
+                                <div className="px-3 py-2 text-[9px] text-gray-400">No clients found</div>
+                              ) : (
+                                clients.filter(c => c.business_name.toLowerCase().includes(adminClientSearch.toLowerCase())).map(c => (
+                                  <div 
+                                    key={c.client_id}
+                                    onClick={() => {
+                                      setAdminInspectedClient(c.client_id);
+                                      setAdminInspectTab('genuine');
+                                      setAdminClientSearch('');
+                                    }}
+                                    className="px-3 py-2 hover:bg-[#d5ecea]/30 text-[#082b36] text-[10px] font-bold cursor-pointer flex justify-between items-center transition"
+                                  >
+                                    <span>{c.business_name}</span>
+                                    {c.status !== 'active' && <span className="text-[8px] text-red-400 bg-red-50 px-1 rounded uppercase">Inactive</span>}
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
                         {adminInspectedClient && (
                           <button 
                             onClick={() => setAdminInspectedClient(null)}
