@@ -1214,10 +1214,21 @@ export default function Dashboard() {
     setShowNewClientModal(false);
   };
 
-  const handleToggleClientStatus = (clientId: string) => {
+  const handleToggleClientStatus = async (clientId: string) => {
+    const client = clients.find(c => c.client_id === clientId);
+    if (!client) return;
+    
+    const newStatus = client.status === 'active' ? 'inactive' : 'active';
+    
+    const { error } = await supabase.from('clients').update({ status: newStatus }).eq('client_id', clientId);
+    if (error) {
+      alert("Failed to toggle status: " + error.message);
+      return;
+    }
+
     setClients(prev => prev.map(c => {
       if (c.client_id === clientId) {
-        return { ...c, status: c.status === 'active' ? 'inactive' : 'active' };
+        return { ...c, status: newStatus };
       }
       return c;
     }));
@@ -1234,11 +1245,26 @@ export default function Dashboard() {
     setEditBizHasGmb(!!client.has_gmb);
   };
 
-  const handleUpdateClient = (e: React.FormEvent) => {
+  const handleUpdateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClient) return;
     if (!editBizName || !editBizEmail) {
       alert("Business Name and Contact Email are required.");
+      return;
+    }
+
+    const { error } = await supabase.from('clients').update({
+      business_name: editBizName,
+      contact_email: editBizEmail,
+      status: editBizStatus,
+      has_seo: editBizHasSeo,
+      has_google_ads: editBizHasGoogleAds,
+      has_fb_ads: editBizHasFbAds,
+      has_gmb: editBizHasGmb
+    }).eq('client_id', editingClient.client_id);
+
+    if (error) {
+      alert("Failed to update client: " + error.message);
       return;
     }
 
@@ -1259,16 +1285,29 @@ export default function Dashboard() {
     }));
 
     setEditingClient(null);
-    alert(`Successfully updated space '${editBizName}' details!`);
+    alert(`Successfully updated space '${editBizName}' details in Database!`);
   };
 
-  const handleDeleteClient = (clientId: string) => {
+  const handleDeleteClient = async (clientId: string) => {
     if (!confirm("CRITICAL WARNING: Deleting this client tenant will permanently shred all user portals and leads records from the system database. Proceed?")) {
       return;
     }
+
+    // Delete from Supabase Database
+    const { error } = await supabase.from('clients').delete().eq('client_id', clientId);
+    
+    if (error) {
+      alert("Failed to delete client: " + error.message);
+      return;
+    }
+
+    // Also try to delete their profile (since cascading might just SET NULL)
+    await supabase.from('profiles').delete().eq('client_id', clientId);
+
     setClients(prev => prev.filter(c => c.client_id !== clientId));
     setLeads(prev => prev.filter(l => l.client_id !== clientId));
     setUsers(prev => prev.filter(u => u.client_id !== clientId));
+    alert("Client successfully deleted from the Database.");
   };
 
   const handleSaveN8nConfig = (e: React.FormEvent) => {
