@@ -763,6 +763,8 @@ export default function Dashboard() {
     return saved ? JSON.parse(saved) : DEFAULT_LEADS;
   });
 
+  const [selectedLeadIds, setSelectedLeadIds] = useState<number[]>([]);
+
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('ls_users');
     return saved ? JSON.parse(saved) : DEFAULT_USERS;
@@ -1766,6 +1768,30 @@ export default function Dashboard() {
     }));
   };
 
+  const handleDeleteLeads = async (leadIds: number[]) => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${leadIds.length} lead(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('leads').delete().in('id', leadIds);
+      if (error) {
+        alert('Failed to delete leads from database: ' + error.message);
+        return;
+      }
+      setLeads(prev => prev.filter(l => !leadIds.includes(l.id)));
+      setSelectedLeadIds(prev => prev.filter(id => !leadIds.includes(id)));
+    } catch (err: any) {
+      alert('An unexpected error occurred during deletion: ' + err.message);
+    }
+  };
+
+  const toggleSelectLead = (leadId: number) => {
+    setSelectedLeadIds(prev => 
+      prev.includes(leadId) ? prev.filter(id => id !== leadId) : [...prev, leadId]
+    );
+  };
+
   const handleSimulateClientApiPull = (clientId: string, type: 'stats' | 'leads') => {
     setClientApiPulseOn(true);
     setClientApiLogs('Initializing REST handshake with secure cPanel SSL... HTTP/1.1 GET\nConnecting to endpoint: /lead-shield/api/get-leads.php\nAuthenticating Workspace client-secret token...\n\n');
@@ -2666,11 +2692,52 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-between border-t border-[#096260]/10 pt-4 mt-2">
+                    <div className="flex items-center gap-3">
+                      {selectedLeadIds.length > 0 && (
+                        <button
+                          onClick={() => handleDeleteLeads(selectedLeadIds)}
+                          className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-lg transition duration-150 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete Selected ({selectedLeadIds.length})</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="overflow-x-auto rounded-2xl border border-[#096260]/5">
                     <table className="w-full text-left text-xs text-[#082b36] border-collapse">
                       <thead>
                         <tr className="border-b border-[#096260]/10 text-[10px] text-[#096260]/85 font-mono uppercase tracking-widest bg-[#d5ecea]/20">
-                          <th className="p-4 rounded-tl-2xl">Caught (UTC)</th>
+                          <th className="p-4 rounded-tl-2xl w-10">
+                            <input 
+                              type="checkbox"
+                              onChange={(e) => {
+                                const visibleIds = leads
+                                  .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                                  .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                                  .map(l => l.id);
+                                if (e.target.checked) {
+                                  setSelectedLeadIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+                                } else {
+                                  setSelectedLeadIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                }
+                              }}
+                              checked={
+                                leads
+                                  .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                                  .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                                  .length > 0 &&
+                                leads
+                                  .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                                  .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                                  .every(l => selectedLeadIds.includes(l.id))
+                              }
+                              className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
+                            />
+                          </th>
+                          <th className="p-4">Caught (UTC)</th>
                           <th className="p-4">Client Space</th>
                           <th className="p-4">Channel</th>
                           <th className="p-4">Payload Summary</th>
@@ -2686,6 +2753,14 @@ export default function Dashboard() {
                             const clientDetail = clients.find(c => c.client_id === l.client_id);
                             return (
                               <tr key={l.id} className="hover:bg-[#d5ecea]/10 transition">
+                                <td className="p-4">
+                                  <input 
+                                    type="checkbox"
+                                    checked={selectedLeadIds.includes(l.id)}
+                                    onChange={() => toggleSelectLead(l.id)}
+                                    className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
+                                  />
+                                </td>
                                 <td className="p-4 text-[10px] font-mono text-gray-400 whitespace-nowrap">{l.created_at}</td>
                                 <td className="p-4">
                                   <p className="font-extrabold text-[#082b36]">{clientDetail?.business_name || l.client_id}</p>
@@ -2718,13 +2793,22 @@ export default function Dashboard() {
                                   </span>
                                 </td>
                                 <td className="p-4 text-right">
-                                  <button
-                                    onClick={() => setSelectedAuditLead(l)}
-                                    className="text-[10px] bg-[#082b36] hover:bg-[#096260] text-white py-1.5 px-3.5 rounded-xl transition duration-150 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
-                                  >
-                                    <Eye size={12} />
-                                    <span>Payload</span>
-                                  </button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => handleDeleteLeads([l.id])}
+                                      className="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-xl transition duration-150 cursor-pointer"
+                                      title="Delete Lead permanently"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => setSelectedAuditLead(l)}
+                                      className="text-[10px] bg-[#082b36] hover:bg-[#096260] text-white py-1.5 px-3.5 rounded-xl transition duration-150 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                                    >
+                                      <Eye size={12} />
+                                      <span>Payload</span>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -2981,13 +3065,24 @@ export default function Dashboard() {
                       </button>
                     </div>
 
-                    <button 
-                      onClick={() => handleTriggerCsvExport(clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE')}
-                      className="bg-[#082b36] hover:bg-[#096260] text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#082b36]/15 transition duration-150 flex items-center gap-2 self-start cursor-pointer hover:translate-y-[-1px]"
-                    >
-                      <Download size={14} />
-                      <span>Export Filtered Current Grid (CSV)</span>
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {selectedLeadIds.length > 0 && (
+                        <button
+                          onClick={() => handleDeleteLeads(selectedLeadIds)}
+                          className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg transition duration-150 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete Selected ({selectedLeadIds.length})</span>
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => handleTriggerCsvExport(clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE')}
+                        className="bg-[#082b36] hover:bg-[#096260] text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#082b36]/15 transition duration-150 flex items-center gap-2 self-start cursor-pointer hover:translate-y-[-1px]"
+                      >
+                        <Download size={14} />
+                        <span>Export Filtered Current Grid (CSV)</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Leads Data Grid */}
@@ -2995,6 +3090,45 @@ export default function Dashboard() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-[#096260]/10 text-[10px] text-[#096260]/85 font-mono uppercase tracking-widest bg-[#d5ecea]/20">
+                          <th className="p-4 w-10">
+                            <input 
+                              type="checkbox"
+                              onChange={(e) => {
+                                const visibleIds = leads
+                                  .filter(l => l.client_id === loggedInUser.client_id)
+                                  .filter(l => {
+                                    const normChan = l.channel || 'website';
+                                    return clientChannelFilter === 'all' || normChan === clientChannelFilter;
+                                  })
+                                  .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE'))
+                                  .map(l => l.id);
+                                if (e.target.checked) {
+                                  setSelectedLeadIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+                                } else {
+                                  setSelectedLeadIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                }
+                              }}
+                              checked={
+                                leads
+                                  .filter(l => l.client_id === loggedInUser.client_id)
+                                  .filter(l => {
+                                    const normChan = l.channel || 'website';
+                                    return clientChannelFilter === 'all' || normChan === clientChannelFilter;
+                                  })
+                                  .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE'))
+                                  .length > 0 &&
+                                leads
+                                  .filter(l => l.client_id === loggedInUser.client_id)
+                                  .filter(l => {
+                                    const normChan = l.channel || 'website';
+                                    return clientChannelFilter === 'all' || normChan === clientChannelFilter;
+                                  })
+                                  .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE'))
+                                  .every(l => selectedLeadIds.includes(l.id))
+                              }
+                              className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
+                            />
+                          </th>
                           <th className="p-4 w-36">Catch Time (UTC)</th>
                           <th className="p-4 w-36">Source Channel</th>
                           <th className="p-4">Submission field inputs</th>
@@ -3014,6 +3148,14 @@ export default function Dashboard() {
                           .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE'))
                           .map(l => (
                             <tr key={l.id} className="hover:bg-[#d5ecea]/10 transition">
+                              <td className="p-4">
+                                <input 
+                                  type="checkbox"
+                                  checked={selectedLeadIds.includes(l.id)}
+                                  onChange={() => toggleSelectLead(l.id)}
+                                  className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
+                                />
+                              </td>
                               <td className="p-4 font-mono text-[10px] text-gray-400 whitespace-nowrap">{l.created_at}</td>
                               <td className="p-4 whitespace-nowrap">
                                 {(() => {
@@ -3050,29 +3192,38 @@ export default function Dashboard() {
                               )}
 
                               <td className="p-4 text-right">
-                                {clientActiveTab === 'spam' ? (
-                                  <button 
-                                    onClick={() => handleMarkAsGenuine(l.id)}
-                                    className="bg-[#d5ecea] hover:bg-[#5fb4a9] text-[#096260] hover:text-white font-extrabold text-[11px] py-2 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1 shadow-sm border border-[#096260]/10"
+                                <div className="flex items-center justify-end gap-2.5">
+                                  <button
+                                    onClick={() => handleDeleteLeads([l.id])}
+                                    className="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-xl transition duration-150 cursor-pointer"
+                                    title="Delete Lead permanently"
                                   >
-                                    <Check size={12} />
-                                    <span>Mark as Genuine</span>
+                                    <Trash2 size={14} />
                                   </button>
-                                ) : (
-                                  <div className="flex items-center justify-end gap-2.5">
-                                    <span className="inline-block bg-[#096260]/10 text-[#096260] font-mono font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg border border-[#096260]/10 shadow-xs uppercase tracking-wide">
-                                      INBOX READY
-                                    </span>
+                                  {clientActiveTab === 'spam' ? (
                                     <button 
-                                      onClick={() => handleMarkAsSpam(l.id)}
-                                      className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-extrabold text-[11px] py-1.5 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1.5 shadow-sm border border-red-500/15"
-                                      title="Flag this lead manually as SPAM"
+                                      onClick={() => handleMarkAsGenuine(l.id)}
+                                      className="bg-[#d5ecea] hover:bg-[#5fb4a9] text-[#096260] hover:text-white font-extrabold text-[11px] py-2 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1 shadow-sm border border-[#096260]/10"
                                     >
-                                      <AlertTriangle size={12} />
-                                      <span>Mark as Spam</span>
+                                      <Check size={12} />
+                                      <span>Mark as Genuine</span>
                                     </button>
-                                  </div>
-                                )}
+                                  ) : (
+                                    <>
+                                      <span className="inline-block bg-[#096260]/10 text-[#096260] font-mono font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg border border-[#096260]/10 shadow-xs uppercase tracking-wide">
+                                        INBOX READY
+                                      </span>
+                                      <button 
+                                        onClick={() => handleMarkAsSpam(l.id)}
+                                        className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-extrabold text-[11px] py-1.5 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1.5 shadow-sm border border-red-500/15"
+                                        title="Flag this lead manually as SPAM"
+                                      >
+                                        <AlertTriangle size={12} />
+                                        <span>Mark as Spam</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
