@@ -4224,9 +4224,9 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                 <span className="bg-[#096260]/10 text-[#096260] text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">SECURE GET ENDPOINT</span>
                 <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">LIVE INTELLIGENCE FEED</span>
               </div>
-              <h3 className="text-base font-extrabold text-[#082b36] mt-1">📊 Leads Stats & Audit Feed API Query Channel (Sinhala & English Guide)</h3>
+              <h3 className="text-base font-extrabold text-[#082b36] mt-1">📊 Leads Stats & Audit Feed API Query Channel</h3>
               <p className="text-xs text-gray-500 mt-1">
-                මෙම API එක භාවිතයෙන් වෙනත් ඕනෑම වෙබ් අඩවියකට හෝ app එකකට genuine සහ spam leads ප්‍රමාණයන් (with filters for date ranges and client IDs) ලබාගත හැක.
+                Easily fetch genuine and spam lead metrics into any external website or app using this API. Includes support for date range and client ID filters.
               </p>
             </div>
 
@@ -4244,7 +4244,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                     onChange={(e) => setStatsClientId(e.target.value)}
                     className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-semibold text-[#082b36]"
                   >
-                    <option value="all">🌐 All Clients combined (සියල්ලම)</option>
+                    <option value="all">🌐 All Clients combined</option>
                     {clients.map(c => (
                       <option key={c.client_id} value={c.client_id}>🏢 {c.business_name} ({c.client_id})</option>
                     ))}
@@ -4292,7 +4292,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                     </button>
                   </div>
                   <p className="text-[9px] text-gray-400 mt-1 leading-normal">
-                    ඔබට hosting settings වලින් secret variables configure කිරීමට අවශ්‍ය නැත. මෙම value එක Plug-and-Play කේතය සඳහා bypass කර සකසා ඇත.
+                    No need to configure secret variables in your hosting environments. This default value is set up for simple plug-and-play testing.
                   </p>
                 </div>
 
