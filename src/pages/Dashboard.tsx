@@ -3172,13 +3172,24 @@ export default function Dashboard() {
                                 })()}
                               </td>
                               <td className="p-4 text-xs">
-                                <div className="space-y-1 bg-[#d5ecea]/15 p-3 rounded-xl border border-[#096260]/10 font-sans max-w-lg">
-                                  {Object.entries(l.form_data).map(([k, v]) => (
-                                    <p key={k} className="leading-normal">
-                                      <span className="text-[#096260]/60 font-mono text-[9px] uppercase font-bold">{k.replace(/_/g, ' ')}:</span>{' '}
-                                      <strong className="text-[#082b36] font-semibold">{String(v)}</strong>
-                                    </p>
-                                  ))}
+                                <div className="bg-[#0f172a] text-[#e2e8f0] font-mono text-[11px] p-4 rounded-xl border border-slate-800 max-w-xl leading-relaxed shadow-inner overflow-x-auto">
+                                  <div className="mb-3 text-slate-300">Details of the Person</div>
+                                  <div className="space-y-1 whitespace-pre-wrap">
+                                    {Object.entries(l.form_data).map(([k, v]) => {
+                                      const keyName = k.replace(/_/g, ' ');
+                                      // capitalize first letter
+                                      const displayKey = keyName.charAt(0).toUpperCase() + keyName.slice(1);
+                                      return (
+                                        <div key={k}>
+                                          <span className="text-slate-300">{displayKey}:</span> {String(v)}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="mt-5 text-slate-500">
+                                    --<br/>
+                                    This is a notification that a contact form was submitted on your website ({loggedInUser.client_id ? clients.find(c => c.client_id === loggedInUser.client_id)?.business_name || 'Website' : 'Website'}).
+                                  </div>
                                 </div>
                               </td>
                               
