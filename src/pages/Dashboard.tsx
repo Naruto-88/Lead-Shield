@@ -3172,8 +3172,8 @@ export default function Dashboard() {
                                 })()}
                               </td>
                               <td className="p-4 text-xs">
-                                <div className="bg-[#0f172a] text-[#e2e8f0] font-mono text-[11px] p-4 rounded-xl border border-slate-800 max-w-xl leading-relaxed shadow-inner overflow-x-auto">
-                                  <div className="mb-3 text-slate-300">Details of the Person</div>
+                                <div className="bg-[#082b36] text-[#d5ecea] font-mono text-[11px] p-4 rounded-xl border border-[#096260]/30 max-w-xl leading-relaxed shadow-inner overflow-x-auto">
+                                  <div className="mb-3 text-[#5fb4a9] font-bold tracking-widest uppercase text-[9px]">Details of the Person</div>
                                   <div className="space-y-1 whitespace-pre-wrap">
                                     {Object.entries(l.form_data).map(([k, v]) => {
                                       const keyName = k.replace(/_/g, ' ');
@@ -3181,12 +3181,12 @@ export default function Dashboard() {
                                       const displayKey = keyName.charAt(0).toUpperCase() + keyName.slice(1);
                                       return (
                                         <div key={k}>
-                                          <span className="text-slate-300">{displayKey}:</span> {String(v)}
+                                          <span className="text-[#5fb4a9]/80 capitalize">{displayKey}:</span> {String(v)}
                                         </div>
                                       );
                                     })}
                                   </div>
-                                  <div className="mt-5 text-slate-500">
+                                  <div className="mt-5 text-[#5fb4a9]/50 pt-3 border-t border-[#096260]/20 text-[10px]">
                                     --<br/>
                                     This is a notification that a contact form was submitted on your website ({loggedInUser.client_id ? clients.find(c => c.client_id === loggedInUser.client_id)?.business_name || 'Website' : 'Website'}).
                                   </div>
@@ -4641,12 +4641,25 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
               {/* Key fields loop */}
               <div className="space-y-3">
                 <p className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest font-mono">Incoming dynamic form headers</p>
-                {Object.entries(selectedAuditLead.form_data).map(([key, value]) => (
-                  <div key={key} className="bg-[#d5ecea]/10 border border-[#096260]/5 p-3.5 rounded-2xl flex flex-col sm:flex-row justify-between items-start gap-1.5 shadow-xs">
-                    <span className="text-[10px] font-mono text-[#096260] uppercase tracking-wider font-extrabold shrink-0 mt-0.5">{key.replace(/_/g, ' ')}</span>
-                    <span className="text-xs text-[#082b36] font-sans font-medium break-all text-left bg-white px-3 py-2 rounded-xl border border-[#096260]/10 shadow-sm flex-1 sm:max-w-[70%] leading-relaxed">{String(value)}</span>
+                
+                <div className="bg-[#082b36] text-[#d5ecea] font-mono text-[11px] p-5 rounded-2xl border border-[#096260]/30 shadow-inner overflow-x-auto leading-relaxed">
+                  <div className="mb-4 text-[#5fb4a9] font-bold tracking-widest uppercase text-[10px]">Details of the Person</div>
+                  <div className="space-y-1.5 whitespace-pre-wrap">
+                    {Object.entries(selectedAuditLead.form_data).map(([k, v]) => {
+                      const keyName = k.replace(/_/g, ' ');
+                      const displayKey = keyName.charAt(0).toUpperCase() + keyName.slice(1);
+                      return (
+                        <div key={k}>
+                          <span className="text-[#5fb4a9]/80 capitalize">{displayKey}:</span> {String(v)}
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                  <div className="mt-6 text-[#5fb4a9]/50 pt-4 border-t border-[#096260]/20">
+                    --<br/>
+                    This is a notification that a contact form was submitted on your website ({selectedAuditLead.client_id}).
+                  </div>
+                </div>
               </div>
 
             </div>
