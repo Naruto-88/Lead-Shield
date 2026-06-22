@@ -4,6 +4,8 @@ import { supabase } from './lib/supabase';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import PublicReport from './pages/PublicReport';
+import Feedback from './pages/Feedback';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -49,6 +51,14 @@ export default function App() {
         <Route 
           path="/" 
           element={session ? <Dashboard /> : <Navigate to="/login" replace />} 
+        />
+        <Route 
+          path="/report/:token" 
+          element={<PublicReport />} 
+        />
+        <Route 
+          path="/feedback" 
+          element={<Feedback />} 
         />
       </Routes>
     </Router>

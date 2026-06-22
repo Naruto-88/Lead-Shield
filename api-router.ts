@@ -109,20 +109,208 @@ apiRouter.post("/api/admin/cleanup-spam", async (req, res) => {
   }
 });
 
+// =====================================================================
+// EMAIL SYSTEM API ENDPOINTS
+// =====================================================================
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+
+// Reusable transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp-relay.gmail.com',
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: Number(process.env.SMTP_PORT) === 465,
+  auth: process.env.SMTP_USER ? {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  } : undefined, // Some Google Workspace setups use IP authentication
+});
+
+// Helper to log emails
+async function logEmailSend(client_id: string, sent_to: string, cc_emails: string, trigger_type: 'weekly_auto' | 'manual', status: 'sent' | 'failed', error_message?: string) {
+  try {
+    await supabaseAdmin.from('email_send_log').insert({
+      client_id,
+      sent_to,
+      cc_emails,
+      trigger_type,
+      status,
+      error_message
+    });
+  } catch (err) {
+    console.error("Failed to log email send:", err);
+  }
+}
+
+// 1. Manual Email Sending Endpoint
+apiRouter.post("/api/email/manual-send", async (req, res) => {
+  const { client_id, to, cc, subject, html_content } = req.body;
+  
+  if (!client_id || !to || !subject || !html_content) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: process.env.SMTP_FROM_EMAIL || `"Lead Shield" <noreply@yourdomain.com>`,
+      to,
+      cc,
+      subject,
+      html: html_content,
+    });
+    
+    await logEmailSend(client_id, to, cc || '', 'manual', 'sent');
+    return res.json({ success: true, messageId: info.messageId });
+  } catch (error: any) {
+    console.error("Manual email error:", error);
+    await logEmailSend(client_id, to, cc || '', 'manual', 'failed', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Automated Weekly Summary Cron Endpoint
+apiRouter.get("/api/cron/weekly-summary", async (req, res) => {
+  try {
+    // 1. Fetch clients with auto_email_enabled = true
+    const { data: clients, error: clientErr } = await supabaseAdmin
+      .from('clients')
+      .select('*')
+      .eq('auto_email_enabled', true)
+      .not('followup_email', 'is', null);
+
+    if (clientErr || !clients || clients.length === 0) {
+      return res.json({ success: true, message: "No clients configured for auto email." });
+    }
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    let sentCount = 0;
+
+    for (const client of clients) {
+      // Fetch CCs
+      const { data: ccs } = await supabaseAdmin.from('client_cc_emails').select('email').eq('client_id', client.client_id);
+      const ccEmails = ccs ? ccs.map(c => c.email).join(',') : '';
+
+      // Fetch legit leads from past 7 days
+      const { data: recentLeads } = await supabaseAdmin
+        .from('leads')
+        .select('*')
+        .eq('client_id', client.client_id)
+        .eq('status', 'GENUINE')
+        .gte('created_at', oneWeekAgo.toISOString());
+
+      if (!recentLeads || recentLeads.length === 0) continue;
+
+      // Prepare feedback tokens and HTML
+      let leadsHtml = '';
+      for (const lead of recentLeads) {
+        const token = crypto.randomBytes(16).toString('hex');
+        
+        // Save feedback token
+        await supabaseAdmin.from('lead_feedback').insert({
+          lead_id: lead.id,
+          client_id: client.client_id,
+          status: 'pending',
+          token: token
+        });
+
+        // Use environment variable for host, or fallback for dev
+        const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : (process.env.VITE_APP_URL || 'http://localhost:3000');
+        
+        const convertedUrl = `${baseUrl}/feedback?token=${token}&status=converted`;
+        const notConvertedUrl = `${baseUrl}/feedback?token=${token}&status=not_converted`;
+
+        const name = lead.form_data.name || lead.form_data.Name || 'Client';
+        
+        leadsHtml += `
+          <div style="border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+            <h4 style="margin: 0 0 10px 0; color: #082b36;">Lead #${lead.id}: ${name}</h4>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #475569;">Received: ${new Date(lead.created_at).toLocaleString()}</p>
+            <div style="margin-top: 15px;">
+              <p style="font-size: 13px; font-weight: bold; margin-bottom: 8px;">Was this lead successful?</p>
+              <a href="${convertedUrl}" style="background-color: #059669; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 12px; margin-right: 10px;">✅ Converted</a>
+              <a href="${notConvertedUrl}" style="background-color: #e11d48; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 12px;">❌ Not Converted</a>
+            </div>
+          </div>
+        `;
+      }
+
+      const html_content = `
+        <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto;">
+          <h2 style="color: #096260;">Weekly Lead Summary</h2>
+          <p>Hello ${client.business_name},</p>
+          <p>Here are your genuine leads from the past 7 days. Please let us know how they went by clicking the buttons below!</p>
+          ${leadsHtml}
+          <p style="color: #94a3b8; font-size: 12px; margin-top: 30px;">This is an automated message from your Lead Shield portal.</p>
+        </div>
+      `;
+
+      try {
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM_EMAIL || `"Lead Shield" <noreply@yourdomain.com>`,
+          to: client.followup_email,
+          cc: ccEmails,
+          subject: `Your Weekly Lead Summary (${recentLeads.length} new leads)`,
+          html: html_content,
+        });
+        await logEmailSend(client.client_id, client.followup_email, ccEmails, 'weekly_auto', 'sent');
+        sentCount++;
+      } catch (err: any) {
+        console.error(`Error sending weekly to ${client.client_id}:`, err);
+        await logEmailSend(client.client_id, client.followup_email, ccEmails, 'weekly_auto', 'failed', err.message);
+      }
+    }
+
+    return res.json({ success: true, emailsSent: sentCount });
+  } catch (error: any) {
+    console.error("Cron weekly summary error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Feedback Submission Endpoint
+apiRouter.post("/api/feedback/submit", async (req, res) => {
+  const { token, status, comment } = req.body;
+  if (!token || !status) return res.status(400).json({ error: "Missing token or status" });
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('lead_feedback')
+      .update({ 
+        status, 
+        comment,
+        responded_at: new Date().toISOString()
+      })
+      .eq('token', token)
+      .select()
+      .single();
+
+    if (error || !data) {
+      return res.status(400).json({ error: "Invalid token or feedback already processed." });
+    }
+
+    return res.json({ success: true, message: "Feedback saved successfully." });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // Fetch all data from Supabase instead of local file
 apiRouter.get("/api/data", async (req, res) => {
   if (SUPABASE_URL.includes("missing-env-var")) {
     return res.status(500).json({ error: "Backend Env Vars Missing: VITE_SUPABASE_URL is not configured in Vercel" });
   }
   try {
-    const [ { data: clients }, { data: n8nConfigs }, { data: gmbMetrics }, { data: leads }, { data: profiles } ] = await Promise.all([
+    const [ { data: clients }, { data: n8nConfigs }, { data: gmbMetrics }, { data: leads }, { data: profiles }, { data: leadFeedbacks } ] = await Promise.all([
       supabase.from("clients").select("*"),
       supabase.from("n8n_configs").select("*"),
       supabase.from("gmb_metrics").select("*"),
       supabase.from("leads").select("*").order('created_at', { ascending: false }),
-      supabase.from("profiles").select("*")
+      supabase.from("profiles").select("*"),
+      supabase.from("lead_feedback").select("*")
     ]);
-    res.json({ clients: clients || [], users: profiles || [], gmbMetrics: gmbMetrics || [], n8nConfigs: n8nConfigs || [], leads: leads || [] });
+    res.json({ clients: clients || [], users: profiles || [], gmbMetrics: gmbMetrics || [], n8nConfigs: n8nConfigs || [], leads: leads || [], leadFeedbacks: leadFeedbacks || [] });
   } catch (err: any) {
     res.status(500).json({ error: "Failed to fetch data", details: err.message });
   }
@@ -257,6 +445,58 @@ const handleReceiveLead = async (req: express.Request, res: express.Response) =>
 
 apiRouter.post("/api/receive-lead", handleReceiveLead);
 apiRouter.post("/lead-shield/api/receive-lead.php", handleReceiveLead);
+
+// Cron Snapshot for historical monthly leads
+apiRouter.all("/api/cron/snapshot", async (req, res) => {
+  // Can secure with a CRON_SECRET if provided by Vercel
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && req.headers.authorization !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: "Unauthorized cron access" });
+  }
+
+  try {
+    const now = new Date();
+    // Snapshot the current month (can be run repeatedly due to UPSERT)
+    const month = now.getUTCMonth() + 1; // 1-12
+    const year = now.getUTCFullYear();
+
+    const { data: clients, error: clientsErr } = await supabaseAdmin.from('clients').select('client_id');
+    if (clientsErr) throw clientsErr;
+
+    const results = [];
+    for (const client of (clients || [])) {
+      const startOfMonth = new Date(Date.UTC(year, month - 1, 1)).toISOString();
+      const endOfMonth = new Date(Date.UTC(year, month, 1)).toISOString();
+
+      const { count, error: leadsErr } = await supabaseAdmin.from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', client.client_id)
+        .eq('status', 'GENUINE')
+        .gte('created_at', startOfMonth)
+        .lt('created_at', endOfMonth);
+        
+      if (leadsErr) continue;
+
+      const { error: upsertErr } = await supabaseAdmin.from('historical_monthly_leads')
+        .upsert({
+          client_id: client.client_id,
+          month: month,
+          year: year,
+          legit_count: count || 0,
+          created_at: new Date().toISOString()
+        }, { onConflict: 'client_id,month,year' });
+
+      if (!upsertErr) {
+        results.push({ client_id: client.client_id, month, year, count });
+      }
+    }
+
+    return res.json({ success: true, processed: results.length, snapshots: results });
+  } catch (err: any) {
+    console.error("Cron snapshot error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 // Fallback logic for standalone testing or unhandled API paths
 apiRouter.all("/api/*", (req, res) => res.status(404).json({ error: "API route not found" }));

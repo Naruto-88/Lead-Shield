@@ -3,5 +3,11 @@
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/lead-shield/api/(.*)", "destination": "/api/index" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/weekly-summary",
+      "schedule": "0 8 * * 1"
+    }
   ]
 }

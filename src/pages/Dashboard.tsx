@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import IntelligenceMatrix from '../components/IntelligenceMatrix';
 import { 
   Shield, 
   Lock, 
@@ -18,6 +19,7 @@ import {
   Eye, 
   BookOpen, 
   Send, 
+  TrendingUp, 
   Check, 
   LogOut, 
   Filter, 
@@ -26,8 +28,10 @@ import {
   Code,
   Copy,
   Server,
-  Layers
+  Layers,
+  Mail
 } from 'lucide-react';
+import EmailComposerModal from '../components/EmailComposerModal';
 
 // =====================================================================
 // RAW SOURCE REPOSITORY (Exact Mirror for Code Vault Explorer)
@@ -464,6 +468,16 @@ exit;`
 // =====================================================================
 // SIMULATED SYSTEM TEMPLATE DATASETS
 // =====================================================================
+interface LeadFeedback {
+  id: number;
+  lead_id: number;
+  client_id: string;
+  status: 'converted' | 'not_converted' | 'pending';
+  comment: string | null;
+  token: string;
+  responded_at: string;
+}
+
 interface Client {
   id: number;
   client_id: string;
@@ -475,6 +489,10 @@ interface Client {
   has_google_ads?: boolean;
   has_fb_ads?: boolean;
   has_gmb?: boolean;
+  is_public_visible?: boolean;
+  followup_email?: string;
+  auto_email_enabled?: boolean;
+  public_report_token?: string;
   historical_spam_count?: number;
 }
 
@@ -748,8 +766,8 @@ const TEST_WEBHOOKS = [
 ];
 
 export default function Dashboard() {
-  // Navigation Tabs: 'sim' | 'n8n_hub' | 'webhooks' | 'vault' | 'blueprint'
-  const [currentTab, setCurrentTab] = useState<'sim' | 'n8n_hub' | 'webhooks' | 'vault' | 'blueprint'>('sim');
+  // Navigation Tabs: 'sim' | 'matrix' | 'n8n_hub' | 'webhooks' | 'vault' | 'blueprint'
+  const [currentTab, setCurrentTab] = useState<'sim' | 'matrix' | 'n8n_hub' | 'webhooks' | 'vault' | 'blueprint'>('sim');
   const [activeTestCmd, setActiveTestCmd] = useState<'powershell' | 'cmd' | 'bash'>('powershell');
 
   // Unified Database State (Simulated Local Storage)
@@ -782,6 +800,8 @@ export default function Dashboard() {
     return saved ? JSON.parse(saved) : DEFAULT_N8N_CONFIGS;
   });
 
+  const [leadFeedbacks, setLeadFeedbacks] = useState<LeadFeedback[]>([]);
+
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Initialize and load real persistent data from our Express server
@@ -796,6 +816,7 @@ export default function Dashboard() {
           if (fetched.users) setUsers(fetched.users);
           if (fetched.gmbMetrics) setGmbMetrics(fetched.gmbMetrics);
           if (fetched.n8nConfigs) setN8nConfigs(fetched.n8nConfigs);
+          if (fetched.leadFeedbacks) setLeadFeedbacks(fetched.leadFeedbacks);
         }
       } catch (err) {
         console.error("Failed to load server data, utilizing browser state fallback:", err);
@@ -997,6 +1018,16 @@ export default function Dashboard() {
   const [editBizHasGoogleAds, setEditBizHasGoogleAds] = useState(false);
   const [editBizHasFbAds, setEditBizHasFbAds] = useState(false);
   const [editBizHasGmb, setEditBizHasGmb] = useState(false);
+  const [editBizIsPublic, setEditBizIsPublic] = useState(false);
+  const [editBizPublicToken, setEditBizPublicToken] = useState('');
+  const [editFollowupEmail, setEditFollowupEmail] = useState('');
+  const [editAutoEmailEnabled, setEditAutoEmailEnabled] = useState(false);
+  const [editCcEmails, setEditCcEmails] = useState<{id: number, email: string}[]>([]);
+  const [newCcEmail, setNewCcEmail] = useState('');
+
+  // Email Composer Modal state
+  const [showEmailComposer, setShowEmailComposer] = useState<boolean>(false);
+  const [emailComposerClient, setEmailComposerClient] = useState<Client | null>(null);
 
   // Source Vault tab state
   const [selectedVaultFile, setSelectedVaultFile] = useState<string>("schema.sql");
@@ -1255,7 +1286,7 @@ export default function Dashboard() {
     }));
   };
 
-  const handleOpenEditClient = (client: Client) => {
+  const handleOpenEditClient = async (client: Client) => {
     setEditingClient(client);
     setEditBizName(client.business_name);
     setEditBizEmail(client.contact_email);
@@ -1264,6 +1295,15 @@ export default function Dashboard() {
     setEditBizHasGoogleAds(!!client.has_google_ads);
     setEditBizHasFbAds(!!client.has_fb_ads);
     setEditBizHasGmb(!!client.has_gmb);
+    setEditBizIsPublic(!!client.is_public_visible);
+    setEditBizPublicToken(client.public_report_token || '');
+    setEditFollowupEmail(client.followup_email || '');
+    setEditAutoEmailEnabled(!!client.auto_email_enabled);
+    setNewCcEmail('');
+    
+    // Fetch CC emails
+    const { data: ccs } = await supabase.from('client_cc_emails').select('id, email').eq('client_id', client.client_id);
+    setEditCcEmails(ccs || []);
   };
 
   const handleUpdateClient = async (e: React.FormEvent) => {
@@ -1281,7 +1321,11 @@ export default function Dashboard() {
       has_seo: editBizHasSeo,
       has_google_ads: editBizHasGoogleAds,
       has_fb_ads: editBizHasFbAds,
-      has_gmb: editBizHasGmb
+      has_gmb: editBizHasGmb,
+      is_public_visible: editBizIsPublic,
+      public_report_token: editBizPublicToken || null,
+      followup_email: editFollowupEmail || null,
+      auto_email_enabled: editAutoEmailEnabled
     }).eq('client_id', editingClient.client_id);
 
     if (error) {
@@ -1299,7 +1343,11 @@ export default function Dashboard() {
           has_seo: editBizHasSeo,
           has_google_ads: editBizHasGoogleAds,
           has_fb_ads: editBizHasFbAds,
-          has_gmb: editBizHasGmb
+          has_gmb: editBizHasGmb,
+          is_public_visible: editBizIsPublic,
+          public_report_token: editBizPublicToken || undefined,
+          followup_email: editFollowupEmail || undefined,
+          auto_email_enabled: editAutoEmailEnabled
         };
       }
       return c;
@@ -1307,6 +1355,31 @@ export default function Dashboard() {
 
     setEditingClient(null);
     alert(`Successfully updated space '${editBizName}' details in Database!`);
+  };
+
+  const handleAddCcEmail = async () => {
+    if (!newCcEmail || !editingClient) return;
+    const { data, error } = await supabase.from('client_cc_emails').insert({
+      client_id: editingClient.client_id,
+      email: newCcEmail
+    }).select().single();
+    if (error) {
+      alert("Failed to add CC: " + error.message);
+      return;
+    }
+    if (data) {
+      setEditCcEmails(prev => [...prev, data]);
+      setNewCcEmail('');
+    }
+  };
+
+  const handleRemoveCcEmail = async (id: number) => {
+    const { error } = await supabase.from('client_cc_emails').delete().eq('id', id);
+    if (error) {
+      alert("Failed to remove CC: " + error.message);
+      return;
+    }
+    setEditCcEmails(prev => prev.filter(c => c.id !== id));
   };
 
   const handleDeleteClient = async (clientId: string) => {
@@ -1871,10 +1944,42 @@ export default function Dashboard() {
 
   // Export filtered lead set to virtual CSV file download
   const handleTriggerCsvExport = (filterStatus: 'GENUINE' | 'SPAM') => {
-    if (!loggedInUser || !loggedInUser.client_id) return;
+    if (!loggedInUser) return;
     
-    const client_id = loggedInUser.client_id;
-    const exportLeads = leads.filter(l => l.client_id === client_id && l.status === filterStatus);
+    let exportLeads: typeof leads = [];
+    let filePrefix = 'LeadShield';
+
+    if (loggedInUser.role === 'admin') {
+      // If admin is actively inspecting a specific client modal
+      if (adminInspectedClient) {
+        exportLeads = leads
+          .filter(l => l.client_id === adminInspectedClient)
+          .filter(l => l.status === filterStatus);
+        filePrefix = `LeadShield_Inspect_${adminInspectedClient}`;
+      } else {
+        // Otherwise use the Global Feed filters
+        exportLeads = leads
+          .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+          .filter(l => l.status === filterStatus);
+        filePrefix = `LeadShield_Admin_${adminFilterClient || 'AllClients'}`;
+      }
+    } else if (loggedInUser.client_id) {
+      const client_id = loggedInUser.client_id;
+      // Also respect the current channel filter if active!
+      exportLeads = leads
+        .filter(l => l.client_id === client_id && l.status === filterStatus)
+        .filter(l => {
+          const normChan = l.channel || 'website';
+          return clientChannelFilter === 'all' || normChan === clientChannelFilter;
+        });
+      filePrefix = `LeadShield_${client_id}`;
+    }
+
+    // If the user has manually checked specific leads with the checkboxes, restrict the export to ONLY those selected!
+    if (selectedLeadIds.length > 0) {
+      exportLeads = exportLeads.filter(l => selectedLeadIds.includes(l.id));
+      filePrefix += '_Selected';
+    }
 
     if (exportLeads.length === 0) {
       alert("No data present inside your grid to compile a CSV spreadsheet!");
@@ -1907,14 +2012,17 @@ export default function Dashboard() {
       csvRows.push(row.join(','));
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
     const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", encodedUri);
-    downloadAnchor.setAttribute("download", `LeadShield_${client_id}_${filterStatus.toLowerCase()}_export.csv`);
+    downloadAnchor.href = url;
+    downloadAnchor.setAttribute("download", `${filePrefix}_${filterStatus.toLowerCase()}_export.csv`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     document.body.removeChild(downloadAnchor);
+    URL.revokeObjectURL(url);
   };
 
   // Clipboard utility helper
@@ -1976,6 +2084,12 @@ export default function Dashboard() {
             className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'webhooks' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             🧪 n8n Webhook Lab
+          </button>
+          <button
+            onClick={() => setCurrentTab('matrix')}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'matrix' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
+          >
+            <TrendingUp size={14} /> Intelligence
           </button>
           <button
             onClick={() => setCurrentTab('vault')}
@@ -2636,6 +2750,16 @@ export default function Dashboard() {
                                 </td>
                                 <td className="py-4 px-2 text-right">
                                   <button 
+                                    onClick={() => {
+                                      setEmailComposerClient(c);
+                                      setShowEmailComposer(true);
+                                    }}
+                                    className="text-amber-400 hover:text-amber-300 p-2 hover:bg-white/5 rounded-xl transition cursor-pointer mr-1"
+                                    title="Send Manual Follow-up Email"
+                                  >
+                                    <Mail size={14} className="inline" />
+                                  </button>
+                                  <button 
                                     onClick={() => handleOpenEditClient(c)}
                                     className="text-[#5fb4a9] hover:text-white p-2 hover:bg-white/5 rounded-xl transition cursor-pointer mr-1"
                                     title="Edit Client details & subscriptions"
@@ -2742,6 +2866,7 @@ export default function Dashboard() {
                           <th className="p-4">Channel</th>
                           <th className="p-4">Payload Summary</th>
                           <th className="p-4">Verdict</th>
+                          <th className="p-4">Feedback</th>
                           <th className="p-4 text-right rounded-tr-2xl">Raw Fields</th>
                         </tr>
                       </thead>
@@ -2791,6 +2916,15 @@ export default function Dashboard() {
                                   <span className={`inline-block py-1 px-3 rounded-full text-[9px] font-extrabold uppercase tracking-wide border ${l.status === 'GENUINE' ? 'bg-[#096260] text-white border-[#5fb4a9]/30' : 'bg-orange-500/10 text-orange-600 border-orange-500/10'}`}>
                                     {l.status}
                                   </span>
+                                </td>
+                                <td className="p-4">
+                                  {(() => {
+                                    const fb = leadFeedbacks.find(f => f.lead_id === l.id);
+                                    if (!fb) return <span className="text-gray-400 text-[10px] italic">No Feedback</span>;
+                                    if (fb.status === 'converted') return <span className="text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded text-[10px] font-bold">✅ Converted</span>;
+                                    if (fb.status === 'not_converted') return <span className="text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded text-[10px] font-bold">❌ Not Converted</span>;
+                                    return <span className="text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded text-[10px] font-bold">⏳ Pending</span>;
+                                  })()}
                                 </td>
                                 <td className="p-4 text-right">
                                   <div className="flex items-center justify-end gap-2">
@@ -4602,6 +4736,20 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
 
           </div>
         )}
+        {/* Intelligence Matrix Tab */}
+        {currentTab === 'matrix' && (
+          <div className="bg-[#d5ecea]/20 p-6 rounded-2xl shadow-xl border border-[#096260]/10 min-h-[500px] animate-fade-in">
+            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-[#096260]/10">
+              <TrendingUp className="text-[#082b36]" size={24} />
+              <div>
+                <h2 className="text-xl font-bold text-[#082b36] tracking-wide">Global Admin Intelligence Matrix</h2>
+                <p className="text-xs text-[#096260] font-mono mt-1">Aggregated Client Lead Analytics & YoY Reporting</p>
+              </div>
+            </div>
+            <IntelligenceMatrix clients={clients} liveLeads={leads} />
+          </div>
+        )}
+
       </div>
 
       {selectedAuditLead && (
@@ -4774,6 +4922,102 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
                 </div>
               </div>
 
+              {/* Email Follow-up Settings */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Email Follow-up Configuration</h4>
+                
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Primary Follow-up Email</label>
+                  <input 
+                    type="email" 
+                    value={editFollowupEmail}
+                    onChange={(e) => setEditFollowupEmail(e.target.value)}
+                    placeholder="Where should reports go?" 
+                    className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editAutoEmailEnabled} 
+                      onChange={(e) => setEditAutoEmailEnabled(e.target.checked)}
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                    />
+                    <span>Enable Automated Weekly Summary Emails</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">CC Emails</label>
+                  {editCcEmails.length > 0 && (
+                    <ul className="mb-2 space-y-1">
+                      {editCcEmails.map(cc => (
+                        <li key={cc.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg text-xs font-medium text-gray-700">
+                          <span>{cc.email}</span>
+                          <button type="button" onClick={() => handleRemoveCcEmail(cc.id)} className="text-red-500 hover:text-red-700">✖</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-2">
+                    <input 
+                      type="email" 
+                      value={newCcEmail}
+                      onChange={(e) => setNewCcEmail(e.target.value)}
+                      placeholder="Add a CC email"
+                      className="flex-1 bg-white border border-gray-200 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none"
+                    />
+                    <button type="button" onClick={handleAddCcEmail} className="bg-gray-100 px-3 rounded-xl text-xs font-bold hover:bg-gray-200">
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Public Report Settings */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Public Reporting</h4>
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editBizIsPublic} 
+                      onChange={(e) => setEditBizIsPublic(e.target.checked)}
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                    />
+                    <span>Enable Public Intelligence Report</span>
+                  </label>
+                  {editBizIsPublic && (
+                    <div className="flex flex-col gap-1.5 ml-6">
+                      <label className="text-[10px] text-gray-500 font-bold">Public Report Token (Optional)</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={editBizPublicToken}
+                          onChange={(e) => setEditBizPublicToken(e.target.value)}
+                          placeholder="e.g. client-name-123"
+                          className="flex-1 p-2 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#096260]"
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setEditBizPublicToken(editingClient?.client_id + '-' + Math.random().toString(36).substring(7))}
+                          className="text-[10px] bg-gray-100 px-3 rounded-lg font-bold hover:bg-gray-200"
+                        >
+                          Generate
+                        </button>
+                      </div>
+                      {editBizPublicToken && (
+                        <p className="text-[10px] text-[#096260] font-mono mt-1">
+                          Report URL: {window.location.origin}/report/{editBizPublicToken}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </div>
 
             <div className="bg-gray-50/50 p-5 border-t border-gray-100 flex gap-2 justify-end">
@@ -4793,6 +5037,13 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
             </div>
           </form>
         </div>
+      )}
+
+      {showEmailComposer && emailComposerClient && (
+        <EmailComposerModal 
+          client={emailComposerClient} 
+          onClose={() => setShowEmailComposer(false)} 
+        />
       )}
 
       {/* FOOTER CLASSIFY LICENSE */}
