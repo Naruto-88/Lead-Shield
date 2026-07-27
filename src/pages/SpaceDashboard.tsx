@@ -1,4 +1,3 @@
-import PremiumTiltCard from '../components/ui/PremiumTiltCard';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import IntelligenceMatrix from '../components/IntelligenceMatrix';
@@ -30,13 +29,7 @@ import {
   Copy,
   Server,
   Layers,
-  Mail,
-  Search,
-  Calendar,
-  ChevronDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus
+  Mail
 } from 'lucide-react';
 import EmailComposerModal from '../components/EmailComposerModal';
 
@@ -60,7 +53,6 @@ CREATE TABLE IF NOT EXISTS \`clients\` (
     \`id\` INT AUTO_INCREMENT UNIQUE,
     \`client_id\` VARCHAR(50) NOT NULL,
     \`business_name\` VARCHAR(100) NOT NULL,
-    \`short_code\` VARCHAR(20) DEFAULT NULL,
     \`contact_email\` VARCHAR(100) NOT NULL,
     \`status\` ENUM('active', 'inactive') DEFAULT 'active',
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -342,8 +334,8 @@ if (\$_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </script>
 </head>
-<body class="bg-transparent min-h-screen flex items-center justify-center p-4">
-    <!-- UI elements styled using bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30, text-white, bg-black/20 -->
+<body class="bg-[#d5ecea] min-h-screen flex items-center justify-center p-4">
+    <!-- UI elements styled using bg-[#096260], text-[#082b36], bg-white -->
 </body>
 </html>`
   },
@@ -490,7 +482,6 @@ interface Client {
   id: number;
   client_id: string;
   business_name: string;
-  short_code?: string;
   contact_email: string;
   status: 'active' | 'inactive';
   created_at: string;
@@ -504,21 +495,6 @@ interface Client {
   public_report_token?: string;
   historical_spam_count?: number;
 }
-
-export const getClientShortCode = (client?: { business_name?: string; client_id?: string; short_code?: string } | null): string => {
-  if (!client) return '';
-  if (client.short_code && client.short_code.trim()) {
-    return client.short_code.toUpperCase().trim();
-  }
-  const name = client.business_name || client.client_id || '';
-  if (!name) return 'CL';
-  
-  const words = name.trim().split(/[\s_-]+/);
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0] + (words[2] ? words[2][0] : '')).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
 
 interface User {
   id: number;
@@ -613,9 +589,9 @@ export const DEFAULT_N8N_CONFIGS: ClientN8NConfig[] = [
 ];
 
 const DEFAULT_CLIENTS: Client[] = [
-  { id: 1, client_id: 'sydney_decking', business_name: 'Sydney Decking Specialists', short_code: 'SDS', contact_email: 'contact@sydneydecking.au', status: 'active', created_at: '2026-05-18 10:14:02', has_seo: true, has_google_ads: true, has_fb_ads: true, has_gmb: true },
-  { id: 2, client_id: 'melbourne_renos', business_name: 'Melbourne Renovation Co', short_code: 'MRC', contact_email: 'info@melbrenos.com.au', status: 'active', created_at: '2026-05-19 14:32:00', has_seo: true, has_google_ads: true, has_fb_ads: true, has_gmb: false },
-  { id: 3, client_id: 'brisbane_landscapes', business_name: 'Brisbane Landscape Architects', short_code: 'BLA', contact_email: 'hello@brisbanelandscapes.co', status: 'inactive', created_at: '2026-05-20 01:10:45', has_seo: true, has_google_ads: false, has_fb_ads: false, has_gmb: false }
+  { id: 1, client_id: 'sydney_decking', business_name: 'Sydney Decking Specialists', contact_email: 'contact@sydneydecking.au', status: 'active', created_at: '2026-05-18 10:14:02', has_seo: true, has_google_ads: true, has_fb_ads: true, has_gmb: true },
+  { id: 2, client_id: 'melbourne_renos', business_name: 'Melbourne Renovation Co', contact_email: 'info@melbrenos.com.au', status: 'active', created_at: '2026-05-19 14:32:00', has_seo: true, has_google_ads: true, has_fb_ads: true, has_gmb: false },
+  { id: 3, client_id: 'brisbane_landscapes', business_name: 'Brisbane Landscape Architects', contact_email: 'hello@brisbanelandscapes.co', status: 'inactive', created_at: '2026-05-20 01:10:45', has_seo: true, has_google_ads: false, has_fb_ads: false, has_gmb: false }
 ];
 
 const DEFAULT_USERS: User[] = [
@@ -1022,11 +998,6 @@ export default function Dashboard() {
   // Admin Audit Feed filters
   const [adminFilterClient, setAdminFilterClient] = useState('');
   const [adminFilterStatus, setAdminFilterStatus] = useState('');
-  const [adminClientDropdownSearch, setAdminClientDropdownSearch] = useState('');
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [adminDateFilter, setAdminDateFilter] = useState<'all' | '7d' | '28d' | 'this_month' | 'last_month' | 'custom'>('all');
-  const [adminCustomStartDate, setAdminCustomStartDate] = useState('');
-  const [adminCustomEndDate, setAdminCustomEndDate] = useState('');
 
   // Dynamic Form Payload Modal state
   const [selectedAuditLead, setSelectedAuditLead] = useState<Lead | null>(null);
@@ -1041,7 +1012,6 @@ export default function Dashboard() {
   // Client Editing state
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editBizName, setEditBizName] = useState('');
-  const [editShortCode, setEditShortCode] = useState('');
   const [editBizEmail, setEditBizEmail] = useState('');
   const [editBizStatus, setEditBizStatus] = useState<'active' | 'inactive'>('active');
   const [editBizHasSeo, setEditBizHasSeo] = useState(false);
@@ -1319,7 +1289,6 @@ export default function Dashboard() {
   const handleOpenEditClient = async (client: Client) => {
     setEditingClient(client);
     setEditBizName(client.business_name);
-    setEditShortCode(getClientShortCode(client));
     setEditBizEmail(client.contact_email);
     setEditBizStatus(client.status);
     setEditBizHasSeo(!!client.has_seo);
@@ -1347,7 +1316,6 @@ export default function Dashboard() {
 
     const { error } = await supabase.from('clients').update({
       business_name: editBizName,
-      short_code: editShortCode || getClientShortCode({ business_name: editBizName, client_id: editingClient.client_id }),
       contact_email: editBizEmail,
       status: editBizStatus,
       has_seo: editBizHasSeo,
@@ -1370,7 +1338,6 @@ export default function Dashboard() {
         return {
           ...c,
           business_name: editBizName,
-          short_code: editShortCode || getClientShortCode({ business_name: editBizName, client_id: editingClient.client_id }),
           contact_email: editBizEmail,
           status: editBizStatus,
           has_seo: editBizHasSeo,
@@ -1673,21 +1640,21 @@ export default function Dashboard() {
     const filteredMetrics = gmbMetrics.filter(m => m.client_id === clientId);
     
     return (
-      <div id="gmb_custom_tracker_console" className="bg-black/20 rounded-3xl border border-[#b026ff]/40 shadow-md p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#b026ff]/30 pb-4">
+      <div id="gmb_custom_tracker_console" className="bg-white rounded-3xl border border-purple-200 shadow-md p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] bg-[#b026ff]/20 text-[#b026ff] font-mono font-black px-2.5 py-0.5 rounded uppercase tracking-wider">
+              <span className="text-[10px] bg-purple-100 text-purple-700 font-mono font-black px-2.5 py-0.5 rounded uppercase tracking-wider">
                 GOOGLE PROFILE
               </span>
               <span className="text-[10px] bg-emerald-100 text-emerald-800 font-mono font-black px-2 py-0.5 rounded uppercase tracking-wider">
                 MANUAL REPORTING
               </span>
             </div>
-            <h3 className="text-sm font-black text-white mt-1 flex items-center gap-1.5">
+            <h3 className="text-sm font-black text-[#082b36] mt-1 flex items-center gap-1.5">
               💎 GMB Monthly Call Button Click Tracker
             </h3>
-            <p className="text-[11px] text-white/60 leading-relaxed">
+            <p className="text-[11px] text-[#082b36]/60 leading-relaxed">
               Keep track of monthly GMB Map listing click aggregates manually for <strong>{clientName}</strong>.
             </p>
           </div>
@@ -1700,25 +1667,25 @@ export default function Dashboard() {
               setGmbClicksInput(72);
               alert("Loaded sample inputs! Click 'Save Monthly GMB Log' below to insert.");
             }}
-            className="bg-[#b026ff]/10 hover:bg-[#b026ff]/20 text-[#00ffff] text-[10px] font-bold px-3 py-1.5 rounded-xl transition border border-[#b026ff]/40/50 cursor-pointer"
+            className="bg-purple-50 hover:bg-purple-100 text-[#096260] text-[10px] font-bold px-3 py-1.5 rounded-xl transition border border-purple-200/50 cursor-pointer"
           >
             ⚡ Load Sample Values
           </button>
         </div>
 
         {/* Add / Update Entry Area */}
-        <div className="bg-[#b026ff]/10/20 p-5 rounded-2xl border border-[#b026ff]/30/50 space-y-3.5">
+        <div className="bg-purple-50/20 p-5 rounded-2xl border border-purple-100/50 space-y-3.5">
           <h4 className="text-[10px] font-bold text-purple-950 uppercase tracking-widest font-mono">
             ➕ Log / Amend Monthly GMB Clicks
           </h4>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-[9px] font-bold text-[#00ffff] uppercase tracking-wider mb-1 font-mono">Select Calendar Month</label>
+              <label className="block text-[9px] font-bold text-[#096260] uppercase tracking-wider mb-1 font-mono">Select Calendar Month</label>
               <select
                 value={gmbMonthInput}
                 onChange={(e) => setGmbMonthInput(e.target.value)}
-                className="w-full bg-black/20 border border-white/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-white/10 font-bold text-white"
+                className="w-full bg-white border border-[#096260]/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#096260] font-bold text-[#082b36]"
               >
                 {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
                   <option key={m} value={m}>{m}</option>
@@ -1727,24 +1694,24 @@ export default function Dashboard() {
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold text-[#00ffff] uppercase tracking-wider mb-1 font-mono">Calendar Year</label>
+              <label className="block text-[9px] font-bold text-[#096260] uppercase tracking-wider mb-1 font-mono">Calendar Year</label>
               <input
                 type="number"
                 value={gmbYearInput}
                 onChange={(e) => setGmbYearInput(Number(e.target.value))}
                 placeholder="2026"
-                className="w-full bg-black/20 border border-white/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-white/10 font-bold text-white"
+                className="w-full bg-white border border-[#096260]/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#096260] font-bold text-[#082b36]"
               />
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold text-[#00ffff] uppercase tracking-wider mb-1 font-mono">Call Button Clicks Count</label>
+              <label className="block text-[9px] font-bold text-[#096260] uppercase tracking-wider mb-1 font-mono">Call Button Clicks Count</label>
               <input
                 type="number"
                 value={gmbClicksInput}
                 onChange={(e) => setGmbClicksInput(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="e.g. 50"
-                className="w-full bg-black/20 border border-white/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-white/10 font-bold text-white"
+                className="w-full bg-white border border-[#096260]/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-[#096260] font-bold text-[#082b36]"
               />
             </div>
           </div>
@@ -1766,37 +1733,37 @@ export default function Dashboard() {
         {/* Metrics Logs List Container */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h4 className="text-[10px] font-bold text-white/60 uppercase tracking-widest font-mono">
+            <h4 className="text-[10px] font-bold text-[#082b36]/60 uppercase tracking-widest font-mono">
               🗓️ Logged Monthly Call Clicks History
             </h4>
-            <span className="text-[9px] bg-[#b026ff]/10 text-[#b026ff] px-2 py-0.5 rounded-full font-bold font-mono border border-[#b026ff]/30">
+            <span className="text-[9px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-bold font-mono border border-purple-100">
               {filteredMetrics.length} month(s) tracked
             </span>
           </div>
 
           {filteredMetrics.length === 0 ? (
-            <div className="p-8 text-center bg-white/5 rounded-2xl border border-gray-100 italic text-xs text-gray-400">
+            <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100 italic text-xs text-gray-400">
               No manual GMB call metrics recorded for this workspace. Use the form above to add metrics.
             </div>
           ) : (
-            <PremiumTiltCard className="border border-[#b026ff]/30/60 rounded-2xl overflow-hidden  shadow-inner">
+            <div className="border border-purple-100/60 rounded-2xl overflow-hidden bg-white shadow-inner">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-[#b026ff]/10/50 text-[10px] font-mono uppercase tracking-wider text-[#b026ff] border-b border-[#b026ff]/30">
+                    <tr className="bg-purple-50/50 text-[10px] font-mono uppercase tracking-wider text-purple-900 border-b border-purple-100">
                       <th className="p-3 w-40">Metric ID Record</th>
                       <th className="p-3">Time Period</th>
                       <th className="p-3">Call Actions Clicks</th>
                       <th className="p-3 text-right">Interactive Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs text-gray-300 font-medium">
+                  <tbody className="divide-y divide-gray-100 text-xs text-gray-600 font-medium">
                     {filteredMetrics.map(m => (
-                      <tr key={m.id} className="hover:bg-[#b026ff]/10/5 transition">
+                      <tr key={m.id} className="hover:bg-purple-50/5 transition">
                         <td className="p-3 font-mono text-[9px] text-gray-400 select-all">{m.id}</td>
-                        <td className="p-3 font-bold text-white">🗓️ {m.month} {m.year}</td>
+                        <td className="p-3 font-bold text-gray-800">🗓️ {m.month} {m.year}</td>
                         <td className="p-3 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 text-[#b026ff] bg-[#b026ff]/10 border border-[#b026ff]/40/50 font-black text-[11px] px-2.5 py-1 rounded-xl">
+                          <span className="inline-flex items-center gap-1 text-purple-700 bg-purple-50 border border-purple-200/50 font-black text-[11px] px-2.5 py-1 rounded-xl">
                             📞 {m.call_clicks} clicks
                           </span>
                         </td>
@@ -1808,14 +1775,14 @@ export default function Dashboard() {
                               setGmbYearInput(m.year);
                               setGmbClicksInput(m.call_clicks);
                             }}
-                            className="bg-[#b026ff]/10 hover:bg-[#b026ff]/20 text-[#b026ff] hover:text-[#b026ff] font-extrabold text-[9px] px-2.5 py-1 rounded-lg mr-2 transition cursor-pointer"
+                            className="bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-900 font-extrabold text-[9px] px-2.5 py-1 rounded-lg mr-2 transition cursor-pointer"
                           >
                             Load values ✏️
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteGmbMetric(m.id)}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-400 font-extrabold text-[9px] px-2.5 py-1 rounded-lg transition cursor-pointer"
+                            className="bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 font-extrabold text-[9px] px-2.5 py-1 rounded-lg transition cursor-pointer"
                           >
                             Shred ✖
                           </button>
@@ -1827,28 +1794,28 @@ export default function Dashboard() {
               </div>
 
               {/* Dynamic click trends visualization */}
-              <div className="bg-[#b026ff]/10/30 p-4 border-t border-[#b026ff]/30 flex items-end gap-3 justify-center min-h-[110px]">
+              <div className="bg-purple-50/30 p-4 border-t border-purple-100 flex items-end gap-3 justify-center min-h-[110px]">
                 {filteredMetrics.map(m => {
                   const maxClicks = Math.max(...filteredMetrics.map(x => x.call_clicks), 1);
                   const heightPercentage = Math.round((m.call_clicks / maxClicks) * 80); // max 80px
                   return (
                     <div key={m.id} className="flex flex-col items-center group relative cursor-help">
-                      <span className="absolute bottom-full mb-1 bg-transparent text-white font-mono text-[9px] font-bold rounded px-2 py-0.5 opacity-0 group-hover:opacity-100 transition whitespace-nowrap shadow select-none pointer-events-none z-10">
+                      <span className="absolute bottom-full mb-1 bg-[#082b36] text-white font-mono text-[9px] font-bold rounded px-2 py-0.5 opacity-0 group-hover:opacity-100 transition whitespace-nowrap shadow select-none pointer-events-none z-10">
                         {m.call_clicks} clicks
                       </span>
                       <div 
                         style={{ height: `${heightPercentage + 5}px` }} 
-                        className="w-10 bg-[#b026ff]/100 rounded-t-lg shadow-inner group-hover:bg-purple-600 transition duration-150 relative overflow-hidden"
+                        className="w-10 bg-purple-500 rounded-t-lg shadow-inner group-hover:bg-purple-600 transition duration-150 relative overflow-hidden"
                       >
                         <div className="absolute inset-x-0 top-0 h-1/2 bg-white/10"></div>
                       </div>
-                      <span className="text-[8px] font-mono block mt-1.5 text-gray-300 tracking-tight">{m.month.slice(0,3)} '{String(m.year).slice(2)}</span>
+                      <span className="text-[8px] font-mono block mt-1.5 text-gray-500 tracking-tight">{m.month.slice(0,3)} '{String(m.year).slice(2)}</span>
                     </div>
                   );
                 })}
               </div>
 
-            </PremiumTiltCard>
+            </div>
           )}
         </div>
       </div>
@@ -2072,17 +2039,17 @@ export default function Dashboard() {
   const totalActiveClients = clients.filter(c => c.status === 'active').length;
 
   return (
-    <div className="bg-transparent min-h-screen font-sans text-white flex flex-col antialiased">
+    <div className="bg-[#d5ecea] min-h-screen font-sans text-[#082b36] flex flex-col antialiased">
       
       {/* PERSISTENT PLAYGROUND HEADER AND SANDBOX PLATFORM BOARD */}
-      <div className="bg-transparent text-white border-b border-white/5 px-8 py-5 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+      <div className="bg-[#082b36] text-white border-b border-[#5fb4a9]/20 px-8 py-5 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 rounded-lg flex items-center justify-center border border-white/5">
-            <div className="w-3 h-3 bg-black/20 rounded-full"></div>
+          <div className="w-8 h-8 bg-[#096260] rounded-lg flex items-center justify-center border border-[#5fb4a9]/30">
+            <div className="w-3 h-3 bg-white rounded-full"></div>
           </div>
           <div>
             <h1 className="text-white font-bold text-xl tracking-tight">Lead Shield Dashboard</h1>
-            <p className="text-[#00ffff] text-[10px] uppercase tracking-[0.2em] font-semibold">Active Portal Control System & Lead Analysis</p>
+            <p className="text-[#5fb4a9] text-[10px] uppercase tracking-[0.2em] font-semibold">Active Portal Control System & Lead Analysis</p>
           </div>
         </div>
 
@@ -2096,50 +2063,50 @@ export default function Dashboard() {
 
       {/* ADMIN PERSISTENT NAVIGATION TABS */}
       {loggedInUser && loggedInUser.role === 'admin' && (
-        <div className="bg-transparent backdrop-blur-xl text-white px-8 py-3.5 border-b border-white/5 flex flex-wrap items-center gap-2 select-none shadow-inner">
-          <span className="text-[10px] uppercase font-bold text-[#00ffff] tracking-widest mr-4 flex items-center gap-1.5 font-mono">
+        <div className="bg-[#041a1f] text-white px-8 py-3.5 border-b border-[#5fb4a9]/10 flex flex-wrap items-center gap-2 select-none shadow-inner">
+          <span className="text-[10px] uppercase font-bold text-[#5fb4a9] tracking-widest mr-4 flex items-center gap-1.5 font-mono">
             🎛️ PORTAL CONTROLLER PANEL:
           </span>
           <button
             onClick={() => setCurrentTab('sim')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'sim' ? 'bg-[#170933] text-[#00ffff] neon-glow-cyan ring-1 ring-[#00ffff]/50 border border-[#00ffff]/20' : 'bg-transparent text-[#b026ff] hover:bg-[#170933]/50 hover:text-[#00ffff] transition-all hover:text-white'}`}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'sim' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             🏠 Client Portal Sim
           </button>
           <button
             onClick={() => setCurrentTab('n8n_hub')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'n8n_hub' ? 'bg-[#170933] text-[#00ffff] neon-glow-cyan ring-1 ring-[#00ffff]/50 border border-[#00ffff]/20' : 'bg-transparent text-[#b026ff] hover:bg-[#170933]/50 hover:text-[#00ffff] transition-all hover:text-white'}`}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'n8n_hub' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             🔗 n8n Workflow Hub
           </button>
           <button
             onClick={() => setCurrentTab('webhooks')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'webhooks' ? 'bg-[#170933] text-[#00ffff] neon-glow-cyan ring-1 ring-[#00ffff]/50 border border-[#00ffff]/20' : 'bg-transparent text-[#b026ff] hover:bg-[#170933]/50 hover:text-[#00ffff] transition-all hover:text-white'}`}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'webhooks' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             🧪 n8n Webhook Lab
           </button>
           <button
             onClick={() => setCurrentTab('matrix')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'matrix' ? 'bg-[#170933] text-[#00ffff] neon-glow-cyan ring-1 ring-[#00ffff]/50 border border-[#00ffff]/20' : 'bg-transparent text-[#b026ff] hover:bg-[#170933]/50 hover:text-[#00ffff] transition-all hover:text-white'}`}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'matrix' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             <TrendingUp size={14} /> Intelligence
           </button>
           <button
             onClick={() => setCurrentTab('vault')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'vault' ? 'bg-[#170933] text-[#00ffff] neon-glow-cyan ring-1 ring-[#00ffff]/50 border border-[#00ffff]/20' : 'bg-transparent text-[#b026ff] hover:bg-[#170933]/50 hover:text-[#00ffff] transition-all hover:text-white'}`}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'vault' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             📁 cPanel Code Vault
           </button>
           <button
             onClick={() => setCurrentTab('blueprint')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'blueprint' ? 'bg-[#170933] text-[#00ffff] neon-glow-cyan ring-1 ring-[#00ffff]/50 border border-[#00ffff]/20' : 'bg-transparent text-[#b026ff] hover:bg-[#170933]/50 hover:text-[#00ffff] transition-all hover:text-white'}`}
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 ${currentTab === 'blueprint' ? 'bg-[#096260] text-white shadow-md ring-1 ring-white/10' : 'bg-transparent text-[#5fb4a9] hover:bg-white/5 hover:text-white'}`}
           >
             📘 Deployment Blueprint
           </button>
           <div className="flex-1"></div>
           <button
             onClick={handleRunSpamCleanup}
-            className="text-xs font-bold px-4 py-2 rounded-xl bg-red-500/100/20 text-red-400 hover:bg-red-500/100 hover:text-white transition duration-150 cursor-pointer flex items-center gap-1.5 shadow-md border border-red-500/30"
+            className="text-xs font-bold px-4 py-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition duration-150 cursor-pointer flex items-center gap-1.5 shadow-md border border-red-500/30"
           >
             🧹 Run 30-Day Spam Auto-Cleanup
           </button>
@@ -2154,32 +2121,32 @@ export default function Dashboard() {
           <div className="flex-1 flex flex-col p-6 md:p-8 space-y-8">
             
             {/* Context Header Helper */}
-            <PremiumTiltCard className=" rounded-3xl border  p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+            <div className="bg-white rounded-3xl border border-[#096260]/5 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
               <div className="space-y-1.5">
-                <span className="inline-block bg-transparent text-[#00ffff] text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">Live Workspace Access</span>
-                <p className="text-xs text-white/70 leading-relaxed font-normal">
+                <span className="inline-block bg-[#d5ecea] text-[#096260] text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">Live Workspace Access</span>
+                <p className="text-xs text-[#082b36]/70 leading-relaxed font-normal">
                   Welcome to your secure Lead Shield portal. Review your incoming leads, AI filtering metrics, and performance analytics securely.
                 </p>
-                <div className="mt-2.5 flex items-center gap-2 text-[10px] text-[#00ffff] bg-transparent w-max px-3 py-1.5 rounded-lg border border-white/10 font-bold shadow-sm">
+                <div className="mt-2.5 flex items-center gap-2 text-[10px] text-[#096260] bg-[#d5ecea]/40 w-max px-3 py-1.5 rounded-lg border border-[#096260]/10 font-bold shadow-sm">
                   <span className="text-sm">🤖</span>
                   <span>AI Spam Filtering Accuracy: ~99.9%. Please review the Spam folder occasionally as no AI is 100% perfect.</span>
                 </div>
               </div>
 
               {/* Quick Login Accounts to accelerate user tests (Confined strictly by active session permissions) */}
-              <div className="flex flex-wrap items-center gap-2.5 bg-transparent p-3 rounded-2xl border border-white/10 animate-fade-in">
+              <div className="flex flex-wrap items-center gap-2.5 bg-[#d5ecea]/35 p-3 rounded-2xl border border-[#096260]/5 animate-fade-in">
                 {loggedInUser === null ? (
                   <>
-                    <span className="text-[10px] uppercase font-bold text-[#00ffff]/80 tracking-widest pl-1 select-none">Checking Session Security...</span>
+                    <span className="text-[10px] uppercase font-bold text-[#096260]/80 tracking-widest pl-1 select-none">Checking Session Security...</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-[10px] uppercase font-bold text-[#00ffff]/70 tracking-widest pl-1 select-none font-mono">
-                      🔐 LOGGED IN AS: <span className="text-white font-black">{loggedInUser.username}</span> ({loggedInUser.role === 'admin' ? 'SUPER_ADMIN' : 'CLIENT_WORKSPACE'})
+                    <span className="text-[10px] uppercase font-bold text-[#096260]/70 tracking-widest pl-1 select-none font-mono">
+                      🔐 LOGGED IN AS: <span className="text-[#082b36] font-black">{loggedInUser.username}</span> ({loggedInUser.role === 'admin' ? 'SUPER_ADMIN' : 'CLIENT_WORKSPACE'})
                     </span>
                     {loggedInUser.role === 'admin' && (
-                      <div className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3">
-                        <span className="text-[9px] font-bold text-[#00ffff]/70 uppercase">Client Workspace Inspection:</span>
+                      <div className="flex items-center gap-1.5 ml-2 border-l border-[#096260]/20 pl-3">
+                        <span className="text-[9px] font-bold text-[#096260]/70 uppercase">Client Workspace Inspection:</span>
                         <div className="relative">
                           <input
                             type="text"
@@ -2191,22 +2158,14 @@ export default function Dashboard() {
                             }}
                             onFocus={() => setShowAdminClientSearch(true)}
                             onBlur={() => setTimeout(() => setShowAdminClientSearch(false), 200)}
-                            className={`text-[9px] font-bold px-3 py-1.5 rounded-lg border transition shadow-xs outline-none w-56 ${adminInspectedClient ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white border-white/10' : 'bg-white/5 hover:bg-black/20 text-white border-white/10'}`}
+                            className={`text-[9px] font-bold px-3 py-1.5 rounded-lg border transition shadow-xs outline-none w-56 ${adminInspectedClient ? 'bg-[#096260] text-white border-[#096260]' : 'bg-white/80 hover:bg-white text-[#082b36] border-[#096260]/10'}`}
                           />
                           {showAdminClientSearch && (
-                            <PremiumTiltCard className="absolute top-full mt-1 left-0 w-full max-h-48 overflow-y-auto  border  rounded-xl shadow-xl z-50 py-1 scrollbar">
-                              {clients.filter(c => {
-                                const q = adminClientSearch.toLowerCase();
-                                const sc = getClientShortCode(c).toLowerCase();
-                                return c.business_name.toLowerCase().includes(q) || c.client_id.toLowerCase().includes(q) || sc.includes(q);
-                              }).length === 0 ? (
+                            <div className="absolute top-full mt-1 left-0 w-full max-h-48 overflow-y-auto bg-white border border-[#096260]/10 rounded-xl shadow-xl z-50 py-1 scrollbar">
+                              {clients.filter(c => c.business_name.toLowerCase().includes(adminClientSearch.toLowerCase())).length === 0 ? (
                                 <div className="px-3 py-2 text-[9px] text-gray-400">No clients found</div>
                               ) : (
-                                clients.filter(c => {
-                                  const q = adminClientSearch.toLowerCase();
-                                  const sc = getClientShortCode(c).toLowerCase();
-                                  return c.business_name.toLowerCase().includes(q) || c.client_id.toLowerCase().includes(q) || sc.includes(q);
-                                }).map(c => (
+                                clients.filter(c => c.business_name.toLowerCase().includes(adminClientSearch.toLowerCase())).map(c => (
                                   <div 
                                     key={c.client_id}
                                     onClick={() => {
@@ -2214,25 +2173,20 @@ export default function Dashboard() {
                                       setAdminInspectTab('genuine');
                                       setAdminClientSearch('');
                                     }}
-                                    className="px-3 py-2 hover:bg-[#b026ff]/10 text-white text-[10px] font-bold cursor-pointer flex justify-between items-center transition"
+                                    className="px-3 py-2 hover:bg-[#d5ecea]/30 text-[#082b36] text-[10px] font-bold cursor-pointer flex justify-between items-center transition"
                                   >
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="font-mono text-[9px] bg-[#b026ff]/30 text-[#00ffff] px-1.5 py-0.5 rounded font-black border border-[#b026ff]/40">
-                                        {getClientShortCode(c)}
-                                      </span>
-                                      <span>{c.business_name}</span>
-                                    </div>
-                                    <span className="text-[9px] text-gray-400 font-mono">{c.client_id}</span>
+                                    <span>{c.business_name}</span>
+                                    {c.status !== 'active' && <span className="text-[8px] text-red-400 bg-red-50 px-1 rounded uppercase">Inactive</span>}
                                   </div>
                                 ))
                               )}
-                            </PremiumTiltCard>
+                            </div>
                           )}
                         </div>
                         {adminInspectedClient && (
                           <button 
                             onClick={() => setAdminInspectedClient(null)}
-                            className="bg-red-500/100 hover:bg-red-600 text-white text-[9px] font-bold px-2 py-1 rounded-lg transition cursor-pointer"
+                            className="bg-red-500 hover:bg-red-600 text-white text-[9px] font-bold px-2 py-1 rounded-lg transition cursor-pointer"
                           >
                             Exit Inspect ✖
                           </button>
@@ -2241,21 +2195,21 @@ export default function Dashboard() {
                     )}
                     <button 
                       onClick={() => setLoggedInUser(null)}
-                      className="bg-red-500/100/10 hover:bg-red-500/100/20 text-red-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer hover:translate-y-[-1px] duration-150 ml-2"
+                      className="bg-red-500/10 hover:bg-red-500/20 text-red-700 text-[10px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer hover:translate-y-[-1px] duration-150 ml-2"
                     >
                       Secure Signout 🚪
                     </button>
                   </>
                 )}
               </div>
-            </PremiumTiltCard>
+            </div>
 
             {/* SECURITY WALL GATE - SHIELD UNRESTRICTED VISITORS */}
             {loggedInUser === null ? (
               <div className="flex-1 flex items-center justify-center py-10">
                 <div className="animate-pulse flex flex-col items-center">
-                  <div className="h-12 w-12 border-4 border-white/10 border-t-transparent rounded-full animate-spin mb-4"></div>
-                  <div className="text-white font-bold text-sm tracking-wider">Syncing Secure Roles...</div>
+                  <div className="h-12 w-12 border-4 border-[#096260] border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <div className="text-[#082b36] font-bold text-sm tracking-wider">Syncing Secure Roles...</div>
                 </div>
               </div>
             ) : loggedInUser.role === 'admin' ? (
@@ -2266,11 +2220,11 @@ export default function Dashboard() {
               <div className="space-y-6">
                 
                 {/* Simulated session signpost */}
-                <div className="bg-transparent text-white p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 border border-white/10 shadow-xl select-none">
+                <div className="bg-[#082b36] text-white p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 border border-white/10 shadow-xl select-none">
                   <div className="flex items-center gap-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#5fb4a9] animate-pulse"></span>
                     <p className="text-xs font-mono tracking-wider uppercase text-gray-200">
-                      SESSION ACTIVE • ROLE: <span className="text-[#00ffff] font-bold">SUPER_ADMIN</span> • USER: <span className="text-[#00ffff] font-bold">{loggedInUser.username}</span>
+                      SESSION ACTIVE • ROLE: <span className="text-[#5fb4a9] font-bold">SUPER_ADMIN</span> • USER: <span className="text-[#5fb4a9] font-bold">{loggedInUser.username}</span>
                     </p>
                   </div>
                   <button 
@@ -2293,40 +2247,40 @@ export default function Dashboard() {
 
                 {/* Aggregate stats dashboard */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm flex flex-col justify-between">
-                    <p className="text-[10px] uppercase font-bold text-[#00ffff] tracking-widest">Total Analyzed</p>
-                    <h3 className="text-4xl font-black mt-2 text-white">{totalLeadsAnalyzed}</h3>
+                  <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm flex flex-col justify-between">
+                    <p className="text-[10px] uppercase font-bold text-[#5fb4a9] tracking-widest">Total Analyzed</p>
+                    <h3 className="text-4xl font-black mt-2 text-[#082b36]">{totalLeadsAnalyzed}</h3>
                     <p className="text-[10px] text-green-600 mt-2 font-bold">+12% vs last month</p>
-                  </PremiumTiltCard>
+                  </div>
 
-                  <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm flex flex-col justify-between">
-                    <p className="text-[10px] uppercase font-bold text-[#00ffff] tracking-widest">Genuine Leads</p>
-                    <h3 className="text-4xl font-black mt-2 text-[#00ffff]">{totalGenuineLeads}</h3>
-                    <p className="text-[10px] text-white/40 mt-2">Conversion Rates Stable</p>
-                  </PremiumTiltCard>
+                  <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm flex flex-col justify-between">
+                    <p className="text-[10px] uppercase font-bold text-[#5fb4a9] tracking-widest">Genuine Leads</p>
+                    <h3 className="text-4xl font-black mt-2 text-[#096260]">{totalGenuineLeads}</h3>
+                    <p className="text-[10px] text-[#082b36]/40 mt-2">Conversion Rates Stable</p>
+                  </div>
 
-                  <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm border-l-4 border-l-[#5fb4a9] flex flex-col justify-between">
-                    <p className="text-[10px] uppercase font-bold text-[#00ffff] tracking-widest">Spam Blocked</p>
-                    <h3 className="text-4xl font-black mt-2 text-white">{totalSpamBlocked}</h3>
+                  <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm border-l-4 border-l-[#5fb4a9] flex flex-col justify-between">
+                    <p className="text-[10px] uppercase font-bold text-[#5fb4a9] tracking-widest">Spam Blocked</p>
+                    <h3 className="text-4xl font-black mt-2 text-[#082b36]">{totalSpamBlocked}</h3>
                     <p className="text-[10px] text-orange-600 mt-2 font-bold">High Risk Pattern Detected</p>
-                  </PremiumTiltCard>
+                  </div>
 
-                  <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm flex flex-col justify-between">
-                    <p className="text-[10px] uppercase font-bold text-[#00ffff] tracking-widest">Active Clients</p>
-                    <h3 className="text-4xl font-black mt-2 text-white">{totalActiveClients}</h3>
-                    <p className="text-[10px] text-white/40 mt-2">Running Live hooks</p>
-                  </PremiumTiltCard>
+                  <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm flex flex-col justify-between">
+                    <p className="text-[10px] uppercase font-bold text-[#5fb4a9] tracking-widest">Active Clients</p>
+                    <h3 className="text-4xl font-black mt-2 text-[#082b36]">{totalActiveClients}</h3>
+                    <p className="text-[10px] text-[#082b36]/40 mt-2">Running Live hooks</p>
+                  </div>
                 </div>
 
                 {/* Client Workspace Auditor & Omnichannel Inspection Screen */}
                 {adminInspectedClient && (
-                  <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm space-y-6 mb-6">
+                  <div className="bg-white p-6 rounded-3xl border border-[#096260]/10 shadow-sm space-y-6 mb-6">
                     {(() => {
                       const client = clients.find(c => c.client_id === adminInspectedClient);
                       if (!client) return (
                         <div className="flex justify-between items-center text-red-500 font-bold p-3">
                           <span>Selected Tenant has been removed or no longer exists.</span>
-                          <button onClick={() => setAdminInspectedClient(null)} className="text-xs bg-red-500/10 hover:bg-red-200 px-3 py-1 rounded-xl">Dismiss</button>
+                          <button onClick={() => setAdminInspectedClient(null)} className="text-xs bg-red-105 hover:bg-red-200 px-3 py-1 rounded-xl">Dismiss</button>
                         </div>
                       );
                       
@@ -2336,20 +2290,20 @@ export default function Dashboard() {
                       
                       return (
                         <div className="space-y-6">
-                          <div className="bg-transparent text-white p-6 rounded-2xl border border-white/10 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                          <div className="bg-[#082b36] text-white p-6 rounded-2xl border border-white/10 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 rounded-2xl flex items-center justify-center border border-white/5 text-2xl shadow-inner">
+                              <div className="w-12 h-12 bg-[#096260] rounded-2xl flex items-center justify-center border border-[#5fb4a9]/30 text-2xl shadow-inner">
                                 🏢
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-[#00ffff] font-mono tracking-widest font-bold uppercase">SUPER_ADMIN ACTIVE WORKSPACE INSPECTOR</span>
-                                  <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-xs font-bold text-white px-2 py-0.5 rounded-lg border border-white/10 uppercase">
+                                  <span className="text-[10px] text-[#5fb4a9] font-mono tracking-widest font-bold uppercase">SUPER_ADMIN ACTIVE WORKSPACE INSPECTOR</span>
+                                  <span className="bg-[#096260] text-xs font-bold text-white px-2 py-0.5 rounded-lg border border-white/10 uppercase">
                                     {client.status}
                                   </span>
                                 </div>
                                 <h2 className="text-xl font-bold mt-1 text-white flex items-center gap-2">
-                                  Inspecting: <span className="text-[#00ffff] underline tracking-tight">{client.business_name}</span>
+                                  Inspecting: <span className="text-[#5fb4a9] underline tracking-tight">{client.business_name}</span>
                                 </h2>
                                 <p className="text-xs text-gray-300 mt-1 font-mono">
                                   Client ID Bound: <span className="text-white font-bold">{client.client_id}</span> • Registered Contact: <span className="text-white font-bold">{client.contact_email}</span>
@@ -2360,7 +2314,7 @@ export default function Dashboard() {
                             <div className="flex flex-wrap items-center gap-2.5">
                               <button 
                                 onClick={() => setAdminInspectedClient(null)}
-                                className="bg-red-500/100 hover:bg-red-600 text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-md transition duration-155 cursor-pointer"
+                                className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-md transition duration-155 cursor-pointer"
                               >
                                 Close Inspection View
                               </button>
@@ -2368,10 +2322,10 @@ export default function Dashboard() {
                           </div>
 
                           {/* Subscribed Services Gate */}
-                          <div className="bg-transparent p-5 rounded-2xl border border-white/10">
+                          <div className="bg-[#d5ecea]/10 p-5 rounded-2xl border border-[#096260]/5">
                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 font-mono">Subscribed Service Modules</h3>
                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                               <div className={`p-4 rounded-xl border transition-all ${client.has_seo ? 'bg-black/20 border-white/10 text-white' : 'bg-white/5 border-gray-100 text-gray-400 opacity-60'}`}>
+                               <div className={`p-4 rounded-xl border transition-all ${client.has_seo ? 'bg-white border-[#096260]/10 text-[#082b36]' : 'bg-gray-50/50 border-gray-100 text-gray-400 opacity-60'}`}>
                                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1 text-gray-400">SEO & Lead Intake</p>
                                  <div className="flex items-center justify-between">
                                    <span className="text-xs font-extrabold">Website Forms</span>
@@ -2379,7 +2333,7 @@ export default function Dashboard() {
                                  </div>
                                </div>
                                
-                               <div className={`p-4 rounded-xl border transition-all ${client.has_google_ads ? 'bg-black/20 border-white/10 text-white' : 'bg-white/5 border-gray-100 text-gray-400 opacity-60'}`}>
+                               <div className={`p-4 rounded-xl border transition-all ${client.has_google_ads ? 'bg-white border-[#096260]/10 text-[#082b36]' : 'bg-gray-50/50 border-gray-100 text-gray-400 opacity-60'}`}>
                                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1 text-gray-400">AdWords Module</p>
                                  <div className="flex items-center justify-between">
                                    <span className="text-xs font-extrabold">Google Ads CPC</span>
@@ -2387,7 +2341,7 @@ export default function Dashboard() {
                                  </div>
                                </div>
 
-                               <div className={`p-4 rounded-xl border transition-all ${client.has_fb_ads ? 'bg-black/20 border-white/10 text-white' : 'bg-white/5 border-gray-100 text-gray-400 opacity-60'}`}>
+                               <div className={`p-4 rounded-xl border transition-all ${client.has_fb_ads ? 'bg-white border-[#096260]/10 text-[#082b36]' : 'bg-gray-50/50 border-gray-100 text-gray-400 opacity-60'}`}>
                                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1 text-gray-400">Social Lead Ads</p>
                                  <div className="flex items-center justify-between">
                                    <span className="text-xs font-extrabold">Facebook Ads</span>
@@ -2395,7 +2349,7 @@ export default function Dashboard() {
                                  </div>
                                </div>
 
-                               <div className={`p-4 rounded-xl border transition-all ${client.has_gmb ? 'bg-black/20 border-white/10 text-white' : 'bg-white/5 border-gray-100 text-gray-400 opacity-60'}`}>
+                               <div className={`p-4 rounded-xl border transition-all ${client.has_gmb ? 'bg-white border-[#096260]/10 text-[#082b36]' : 'bg-gray-50/50 border-gray-100 text-gray-400 opacity-60'}`}>
                                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1 text-gray-400">Google Profiles</p>
                                  <div className="flex items-center justify-between">
                                    <span className="text-xs font-extrabold">GMB Metrics</span>
@@ -2407,37 +2361,37 @@ export default function Dashboard() {
 
                           {/* Stats Metrics Cards */}
                           <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-transparent p-4 rounded-xl border border-white/10 flex items-center justify-between">
+                            <div className="bg-[#d5ecea]/20 p-4 rounded-xl border border-[#096260]/10 flex items-center justify-between">
                               <div>
-                                <p className="text-[10px] font-bold text-[#00ffff] uppercase tracking-widest mb-1 font-mono">Genuine Delivery Inbounds</p>
-                                <p className="text-2xl font-black text-white">{genuineLeadsCount}</p>
+                                <p className="text-[10px] font-bold text-[#5fb4a9] uppercase tracking-widest mb-1 font-mono">Genuine Delivery Inbounds</p>
+                                <p className="text-2xl font-black text-[#082b36]">{genuineLeadsCount}</p>
                               </div>
-                              <span className="text-[#00ffff] text-lg">📬</span>
+                              <span className="text-[#096260] text-lg">📬</span>
                             </div>
 
-                            <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 border-l-4 border-l-red-500 flex items-center justify-between">
+                            <div className="bg-red-50 p-4 rounded-xl border border-red-100 border-l-4 border-l-red-500 flex items-center justify-between">
                               <div>
                                 <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1 font-mono">Spam Shielded Blocks</p>
-                                <p className="text-2xl font-black text-red-400">{spamLeadsCount}</p>
+                                <p className="text-2xl font-black text-red-600">{spamLeadsCount}</p>
                               </div>
                               <span className="text-red-500 text-lg">🛡️</span>
                             </div>
                           </div>
 
                           {/* Inspected client feed logs */}
-                          <PremiumTiltCard className=" rounded-2xl border  shadow-sm overflow-hidden flex flex-col">
+                          <div className="bg-white rounded-2xl border border-[#096260]/10 shadow-sm overflow-hidden flex flex-col">
                             {/* Filter Bar specifically for this customer client workspace inspection */}
-                            <div className="border-b border-white/10 p-4 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <div className="flex gap-1 p-1 bg-black/20 rounded-xl self-start border border-white/10">
+                            <div className="border-b border-[#096260]/10 p-4 bg-[#d5ecea]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <div className="flex gap-1 p-1 bg-white rounded-xl self-start border border-[#096260]/10">
                                 <button 
                                   onClick={() => setAdminInspectTab('genuine')}
-                                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${adminInspectTab === 'genuine' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${adminInspectTab === 'genuine' ? 'bg-[#096260] text-white shadow-sm' : 'text-[#082b36]/60 hover:text-[#082b36]'}`}
                                 >
                                   Genuine Inquiries ({genuineLeadsCount})
                                 </button>
                                 <button 
                                   onClick={() => setAdminInspectTab('spam')}
-                                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${adminInspectTab === 'spam' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-sm' : 'text-white/60 hover:text-red-400'}`}
+                                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${adminInspectTab === 'spam' ? 'bg-[#096260] text-white shadow-sm' : 'text-[#082b36]/60 hover:text-red-600'}`}
                                 >
                                   Shield Gating ({spamLeadsCount})
                                 </button>
@@ -2445,7 +2399,7 @@ export default function Dashboard() {
 
                               <button 
                                 onClick={() => handleTriggerCsvExport(adminInspectTab === 'spam' ? 'SPAM' : 'GENUINE')}
-                                className="bg-transparent hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold py-2 px-3 rounded-lg shadow transition duration-150 flex items-center gap-1.5 self-start cursor-pointer"
+                                className="bg-[#082b36] hover:bg-[#096260] text-white text-xs font-bold py-2 px-3 rounded-lg shadow transition duration-150 flex items-center gap-1.5 self-start cursor-pointer"
                               >
                                 <Download size={13} />
                                 <span>Export filtered (CSV)</span>
@@ -2454,9 +2408,9 @@ export default function Dashboard() {
 
                             {/* Table list */}
                             <div className="overflow-x-auto">
-                              <table className="w-full text-left text-xs text-white border-collapse font-sans">
+                              <table className="w-full text-left text-xs text-[#082b36] border-collapse font-sans">
                                 <thead>
-                                  <tr className="border-b border-white/10 text-[10px] text-[#00ffff]/85 font-mono uppercase tracking-widest bg-white/5">
+                                  <tr className="border-b border-[#096260]/10 text-[10px] text-[#096260]/85 font-mono uppercase tracking-widest bg-gray-50/50">
                                     <th className="p-3">Arrived Time</th>
                                     <th className="p-3">Sender Email</th>
                                     <th className="p-3">Payload Summary</th>
@@ -2468,19 +2422,19 @@ export default function Dashboard() {
                                   {clientLeads
                                     .filter(l => (adminInspectTab === 'genuine' ? l.status === 'GENUINE' : l.status === 'SPAM'))
                                     .map(l => (
-                                      <tr key={l.id} className="hover:bg-transparent transition">
+                                      <tr key={l.id} className="hover:bg-[#d5ecea]/10 transition">
                                         <td className="p-3 text-[10px] font-mono text-gray-400 whitespace-nowrap">{l.created_at}</td>
-                                        <td className="p-3 font-semibold text-white">
+                                        <td className="p-3 font-semibold text-[#082b36]">
                                           {l.form_data.email || l.form_data.contact_email || 'anonymous-webhook@address.com'}
                                         </td>
-                                        <td className="p-3 text-[11px] max-w-xs truncate font-mono text-gray-300">
+                                        <td className="p-3 text-[11px] max-w-xs truncate font-mono text-gray-600">
                                           {Object.entries(l.form_data).slice(0, 3).map(([k, v]) => (
                                             <span key={k} className="mr-2 inline-block">
-                                              <span className="text-gray-400">{k}:</span> <strong className="text-gray-300 font-bold">{String(v)}</strong>
+                                              <span className="text-gray-400">{k}:</span> <strong className="text-gray-700 font-bold">{String(v)}</strong>
                                             </span>
                                           ))}
                                         </td>
-                                        <td className="p-3 text-xs font-mono text-gray-300">
+                                        <td className="p-3 text-xs font-mono text-gray-500">
                                           {l.ai_reason ? l.ai_reason : <span className="text-gray-300 italic">None (Pattern OK)</span>}
                                         </td>
                                         <td className="p-3 text-right space-x-1 whitespace-nowrap">
@@ -2499,7 +2453,7 @@ export default function Dashboard() {
                                                 return leadItem;
                                               }));
                                             }}
-                                            className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border transition duration-150 cursor-pointer ${l.status === 'GENUINE' ? 'bg-red-500/100/10 text-red-400 border-red-500/10 hover:bg-red-500/100/20' : 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] border-white/10 hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30'}`}
+                                            className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border transition duration-150 cursor-pointer ${l.status === 'GENUINE' ? 'bg-red-500/10 text-red-700 border-red-500/10 hover:bg-red-500/20' : 'bg-[#096260]/10 text-[#096260] border-[#096260]/10 hover:bg-[#096260]/20'}`}
                                             title="Override Verdict"
                                           >
                                             {l.status === 'GENUINE' ? '⚠️ Mark SPAM' : '✅ Mark GENUINE'}
@@ -2507,7 +2461,7 @@ export default function Dashboard() {
                                           
                                           <button
                                             onClick={() => setSelectedAuditLead(l)}
-                                            className="text-[9px] bg-transparent hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white py-1 px-2 rounded transition duration-150 font-bold inline-flex items-center gap-1 cursor-pointer"
+                                            className="text-[9px] bg-[#082b36] hover:bg-[#096260] text-white py-1 px-2 rounded transition duration-150 font-bold inline-flex items-center gap-1 cursor-pointer"
                                           >
                                             <Eye size={10} />
                                             <span>Raw</span>
@@ -2525,7 +2479,7 @@ export default function Dashboard() {
                                 </tbody>
                               </table>
                             </div>
-                          </PremiumTiltCard>
+                          </div>
 
                           {/* OUTBOUND DEVELOPER API DISCOVERY HUB - EXCLUSIVELY FOR ADMINISTRATORS */}
                           {(() => {
@@ -2533,49 +2487,49 @@ export default function Dashboard() {
                             const targetUsername = clientUserObj ? clientUserObj.username : client.client_id;
                             
                             return (
-                              <div id="developer-api-extranet-hub" className="mt-6 bg-black/20 p-6 rounded-3xl border border-white/10 shadow-sm space-y-6">
+                              <div id="developer-api-extranet-hub" className="mt-6 bg-white p-6 rounded-3xl border border-[#096260]/10 shadow-sm space-y-6">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] rounded-xl flex items-center justify-center text-lg">
+                                  <div className="w-10 h-10 bg-[#096260]/10 text-[#096260] rounded-xl flex items-center justify-center text-lg">
                                     🔌
                                   </div>
                                   <div>
-                                    <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                                    <h3 className="text-sm font-extrabold text-[#082b36] flex items-center gap-2">
                                       Administrator CRM Sync Dashboard (Exclusively Restricted)
-                                      <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[9px] font-mono font-black px-2 py-0.5 rounded border border-white/10 uppercase tracking-wide">Developer Extranet v1</span>
+                                      <span className="bg-[#096260]/10 text-[#096260] text-[9px] font-mono font-black px-2 py-0.5 rounded border border-[#096260]/15 uppercase tracking-wide">Developer Extranet v1</span>
                                     </h3>
                                     <p className="text-xs text-gray-400 mt-1">
-                                      Construct real-time synchronization pipelines to feed <strong className="font-bold text-white">{client.business_name}</strong> leads directly into external CRM interfaces (HubSpot, Salesforce, Zoho), automated webhooks (Make, Zapier, n8n), or internal platforms.
+                                      Construct real-time synchronization pipelines to feed <strong className="font-bold text-[#082b36]">{client.business_name}</strong> leads directly into external CRM interfaces (HubSpot, Salesforce, Zoho), automated webhooks (Make, Zapier, n8n), or internal platforms.
                                     </p>
                                   </div>
                                 </div>
 
                                 {/* Dev Specs Info Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="bg-transparent p-5 rounded-2xl border border-white/10 space-y-2">
-                                    <p className="text-[10px] uppercase font-bold text-gray-300 font-mono tracking-wider">REST API Gateway Endpoint (GET/POST)</p>
-                                    <PremiumTiltCard className=" p-3 rounded-xl border  font-mono text-[10px] break-all select-all text-white shadow-inner font-semibold leading-relaxed">
+                                  <div className="bg-[#d5ecea]/15 p-5 rounded-2xl border border-[#096260]/10 space-y-2">
+                                    <p className="text-[10px] uppercase font-bold text-gray-500 font-mono tracking-wider">REST API Gateway Endpoint (GET/POST)</p>
+                                    <div className="bg-white/80 p-3 rounded-xl border border-[#096260]/5 font-mono text-[10px] break-all select-all text-[#082b36] shadow-inner font-semibold leading-relaxed">
                                       https://your-domain.com/lead-shield/api/get-leads.php?client_id={client.client_id}&username={targetUsername}&password=••••••••&action=leads&status=GENUINE
-                                    </PremiumTiltCard>
-                                    <p className="text-[10px] text-[#00ffff]/80 font-medium">
-                                      💡 Replace <strong className="font-bold text-white">••••••••</strong> with the client's configured password to successfully fetch raw webhook deliveries.
+                                    </div>
+                                    <p className="text-[10px] text-[#096260]/80 font-medium">
+                                      💡 Replace <strong className="font-bold text-[#082b36]">••••••••</strong> with the client's configured password to successfully fetch raw webhook deliveries.
                                     </p>
                                   </div>
 
-                                  <div className="bg-white/5 p-5 rounded-2xl border border-gray-100 space-y-2 text-xs">
-                                    <p className="text-[10px] uppercase font-bold text-gray-300 font-mono tracking-wider">Omnichannel Query Specifications</p>
+                                  <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 space-y-2 text-xs">
+                                    <p className="text-[10px] uppercase font-bold text-gray-500 font-mono tracking-wider">Omnichannel Query Specifications</p>
                                     <div className="space-y-1.5 text-[11px] leading-relaxed">
-                                      <p>• <code className="bg-black/20 px-1 py-0.5 rounded text-[#00ffff] font-mono text-[10px] font-bold">channel</code>: Supports filtering by <span className="font-semibold text-gray-300">"website"</span>, <span className="font-semibold text-gray-300">"google_ads"</span>, <span className="font-semibold text-gray-300">"facebook_ads"</span>, or <span className="font-semibold text-gray-300">"gmb"</span>.</p>
-                                      <p>• <code className="bg-black/20 px-1 py-0.5 rounded text-[#00ffff] font-mono text-[10px] font-bold">action</code>: Extract <span className="font-semibold text-gray-300">"leads"</span> (filtered raw payloads) or <span className="font-semibold text-gray-300">"stats"</span> (numeric counts).</p>
-                                      <p>• <code className="bg-black/20 px-1 py-0.5 rounded text-[#00ffff] font-mono text-[10px] font-bold">status</code>: Retrieve <span className="font-semibold text-gray-300">"GENUINE"</span>, <span className="font-semibold text-gray-300">"SPAM"</span>, or <span className="font-semibold text-gray-300">"ALL"</span> listings.</p>
+                                      <p>• <code className="bg-white px-1 py-0.5 rounded text-[#096260] font-mono text-[10px] font-bold">channel</code>: Supports filtering by <span className="font-semibold text-gray-700">"website"</span>, <span className="font-semibold text-gray-700">"google_ads"</span>, <span className="font-semibold text-gray-700">"facebook_ads"</span>, or <span className="font-semibold text-gray-700">"gmb"</span>.</p>
+                                      <p>• <code className="bg-white px-1 py-0.5 rounded text-[#096260] font-mono text-[10px] font-bold">action</code>: Extract <span className="font-semibold text-gray-700">"leads"</span> (filtered raw payloads) or <span className="font-semibold text-gray-700">"stats"</span> (numeric counts).</p>
+                                      <p>• <code className="bg-white px-1 py-0.5 rounded text-[#096260] font-mono text-[10px] font-bold">status</code>: Retrieve <span className="font-semibold text-gray-700">"GENUINE"</span>, <span className="font-semibold text-gray-700">"SPAM"</span>, or <span className="font-semibold text-gray-700">"ALL"</span> listings.</p>
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* API Playground Test Block */}
-                                <div className="border-t border-white/10 pt-5 space-y-4">
+                                <div className="border-t border-[#096260]/5 pt-5 space-y-4">
                                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
-                                      <h4 className="text-xs font-bold text-white uppercase tracking-wide font-mono">Sandbox API Playground Tester (Admin Sandbox)</h4>
+                                      <h4 className="text-xs font-bold text-[#082b36] uppercase tracking-wide font-mono">Sandbox API Playground Tester (Admin Sandbox)</h4>
                                       <p className="text-[10px] text-gray-400">Instruct this client's credentials system to trigger mock pulls across lead logs inside this workspace.</p>
                                     </div>
 
@@ -2584,7 +2538,7 @@ export default function Dashboard() {
                                         type="button"
                                         onClick={() => handleSimulateClientApiPull(client.client_id, 'stats')}
                                         disabled={clientApiPulseOn}
-                                        className="bg-black/20 hover:bg-transparent text-[#00ffff] border border-white/10 text-[11px] font-extrabold py-2 px-3.5 rounded-xl shadow-xs transition duration-150 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                        className="bg-white hover:bg-[#d5ecea]/40 text-[#096260] border border-[#096260]/20 text-[11px] font-extrabold py-2 px-3.5 rounded-xl shadow-xs transition duration-150 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                       >
                                         {clientApiPulseOn ? '⏳ Fetching...' : '📊 Pull Lead Stats'}
                                       </button>
@@ -2592,7 +2546,7 @@ export default function Dashboard() {
                                         type="button"
                                         onClick={() => handleSimulateClientApiPull(client.client_id, 'leads')}
                                         disabled={clientApiPulseOn}
-                                        className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white text-[11px] font-extrabold py-2 px-3.5 rounded-xl shadow-md transition duration-155 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                        className="bg-[#096260] hover:bg-[#5fb4a9] text-white text-[11px] font-extrabold py-2 px-3.5 rounded-xl shadow-md transition duration-155 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                       >
                                         {clientApiPulseOn ? '⏳ Fetching...' : '⚡ Pull Lead Data List'}
                                       </button>
@@ -2601,8 +2555,8 @@ export default function Dashboard() {
 
                                   {/* Developer Console Screen */}
                                   {clientApiLogs && (
-                                    <div className="bg-transparent rounded-2xl overflow-hidden border border-white/5 shadow-xl flex flex-col">
-                                      <div className="bg-[#03212a] px-4 py-2 border-b border-white/5 flex items-center justify-between text-[10px] font-mono text-[#00ffff] select-none">
+                                    <div className="bg-[#082b36] rounded-2xl overflow-hidden border border-white/5 shadow-xl flex flex-col">
+                                      <div className="bg-[#03212a] px-4 py-2 border-b border-white/5 flex items-center justify-between text-[10px] font-mono text-[#5fb4a9] select-none">
                                         <span className="flex items-center gap-1.5">
                                           <span className={`w-2.5 h-2.5 rounded-full ${clientApiPulseOn ? 'bg-amber-400 animate-ping' : 'bg-[#5fb4a9]'} `}></span>
                                           developer-console://api/get-leads.php
@@ -2618,7 +2572,7 @@ export default function Dashboard() {
                                           Copy Output JSON
                                         </button>
                                       </div>
-                                      <pre className="p-4 font-mono text-[9.5px] text-[#d5ecea] overflow-x-auto max-h-72 leading-relaxed whitespace-pre select-all bg-transparent">
+                                      <pre className="p-4 font-mono text-[9.5px] text-[#d5ecea] overflow-x-auto max-h-72 leading-relaxed whitespace-pre select-all bg-[#082b36]">
                                         {clientApiLogs}
                                       </pre>
                                     </div>
@@ -2629,7 +2583,7 @@ export default function Dashboard() {
                           })()}
 
                           {client.has_gmb && (
-                            <div className="mt-6 border-t border-[#b026ff]/30 pt-6">
+                            <div className="mt-6 border-t border-purple-100 pt-6">
                               {renderGmbTrackerUI(client.client_id, client.business_name)}
                             </div>
                           )}
@@ -2637,44 +2591,44 @@ export default function Dashboard() {
                         </div>
                       );
                     })()}
-                  </PremiumTiltCard>
+                  </div>
                 )}
 
                 {/* Client CRUD Interface along with clients listing */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
                   {/* CRUD Panel: Onboard Client Form */}
-                  <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm">
-                    <h3 className="text-sm font-extrabold text-white mb-1">Onboard New Tenant Client</h3>
+                  <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm">
+                    <h3 className="text-sm font-extrabold text-[#082b36] mb-1">Onboard New Tenant Client</h3>
                     <p className="text-xs text-gray-400 mb-5">Provision isolated workspaces and router access keys automatically</p>
 
                     <form onSubmit={handleCreateNewClient} className="space-y-4">
                       <div>
-                        <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Business Brand Name</label>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Business Brand Name</label>
                         <input 
                           type="text" 
                           value={newBizName}
                           onChange={(e) => setNewBizName(e.target.value)}
                           placeholder="e.g. Brisbane Decking" 
                           required
-                          className="w-full bg-transparent border border-white/10 focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-white outline-none font-medium"
+                          className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Contact Email</label>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Contact Email</label>
                         <input 
                           type="email" 
                           value={newBizEmail}
                           onChange={(e) => setNewBizEmail(e.target.value)}
                           placeholder="e.g. contact@brisdeck.com" 
                           required
-                          className="w-full bg-transparent border border-white/10 focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-white outline-none font-medium"
+                          className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium"
                         />
                       </div>
 
                       <div className="border-t border-gray-100 pt-4 flex flex-col space-y-3">
-                        <p className="text-[10px] text-[#00ffff] font-bold uppercase tracking-widest font-mono">WORKSPACE AUTHENTIALS</p>
+                        <p className="text-[10px] text-[#096260] font-bold uppercase tracking-widest font-mono">WORKSPACE AUTHENTIALS</p>
                         <div>
                           <label className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Portal Login Email</label>
                           <input 
@@ -2683,7 +2637,7 @@ export default function Dashboard() {
                             onChange={(e) => setNewBizUsername(e.target.value)}
                             placeholder="e.g. client@brisdeck.com" 
                             required
-                            className="w-full bg-transparent border border-white/10 focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-white outline-none font-mono"
+                            className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-[#082b36] outline-none font-mono"
                           />
                         </div>
                         <div>
@@ -2694,47 +2648,47 @@ export default function Dashboard() {
                             onChange={(e) => setNewBizPassword(e.target.value)}
                             placeholder="••••••••" 
                             required
-                            className="w-full bg-transparent border border-white/10 focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-white outline-none"
+                            className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2 px-3 text-xs text-[#082b36] outline-none"
                           />
                         </div>
                       </div>
 
                       <div className="border-t border-gray-100 pt-4 flex flex-col space-y-2">
-                        <p className="text-[10px] text-[#00ffff] font-bold uppercase tracking-widest font-mono mb-1">Services Subscribed</p>
+                        <p className="text-[10px] text-[#096260] font-bold uppercase tracking-widest font-mono mb-1">Services Subscribed</p>
                         <div className="grid grid-cols-2 gap-2">
-                          <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={newBizHasSeo} 
                               onChange={(e) => setNewBizHasSeo(e.target.checked)}
-                              className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                              className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                             />
                             <span>SEO & Website</span>
                           </label>
-                          <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={newBizHasGoogleAds} 
                               onChange={(e) => setNewBizHasGoogleAds(e.target.checked)}
-                              className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                              className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                             />
                             <span>Google Ads</span>
                           </label>
-                          <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={newBizHasFbAds} 
                               onChange={(e) => setNewBizHasFbAds(e.target.checked)}
-                              className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                              className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                             />
                             <span>Facebook Ads</span>
                           </label>
-                          <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={newBizHasGmb} 
                               onChange={(e) => setNewBizHasGmb(e.target.checked)}
-                              className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                              className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                             />
                             <span>GMB Tracking</span>
                           </label>
@@ -2743,23 +2697,23 @@ export default function Dashboard() {
 
                       <button 
                         type="submit" 
-                        className="w-full bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white py-3 rounded-xl text-xs font-bold transition-all duration-150 shadow-md shadow-[#096260]/20 cursor-pointer"
+                        className="w-full bg-[#096260] hover:bg-[#5fb4a9] text-white py-3 rounded-xl text-xs font-bold transition-all duration-150 shadow-md shadow-[#096260]/20 cursor-pointer"
                       >
                         Provision Sandbox Workspace Portals
                       </button>
                     </form>
-                  </PremiumTiltCard>
+                  </div>
 
                   {/* Active Clients Grid Table */}
-                  <div className="bg-transparent text-white p-6 rounded-3xl shadow-xl lg:col-span-2 flex flex-col justify-between border border-white/5">
+                  <div className="bg-[#082b36] text-white p-6 rounded-3xl shadow-xl lg:col-span-2 flex flex-col justify-between border border-white/5">
                     <div>
                       <h3 className="text-base font-bold text-white mb-1">Provisioned Portal Spaces</h3>
-                      <p className="text-xs text-[#00ffff] mb-4 font-semibold uppercase tracking-wider">Active Workspace Registrations & Database Binds</p>
+                      <p className="text-xs text-[#5fb4a9] mb-4 font-semibold uppercase tracking-wider">Active Workspace Registrations & Database Binds</p>
 
-                      <div className="overflow-x-auto max-h-[460px] overflow-y-auto scrollbar rounded-xl border border-white/5">
+                      <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs text-white">
-                          <thead className="sticky top-0 bg-[#0d0722]/95 backdrop-blur-md z-10">
-                            <tr className="border-b border-white/10 text-[10px] text-[#00ffff] font-bold uppercase tracking-widest">
+                          <thead>
+                            <tr className="border-b border-white/10 text-[10px] text-[#5fb4a9] font-bold uppercase tracking-widest">
                               <th className="py-3 px-2">Client ID</th>
                               <th className="py-3 px-2">Business / Contact</th>
                               <th className="py-3 px-2 text-center">Status</th>
@@ -2770,12 +2724,7 @@ export default function Dashboard() {
                             {clients.map(c => (
                               <tr key={c.client_id} className="hover:bg-white/5 transition">
                                 <td className="py-4 px-2 font-mono text-[10px]">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="bg-[#b026ff]/30 text-[#00ffff] px-2 py-0.5 rounded-lg font-black font-mono text-[10px] border border-[#b026ff]/40 shadow-xs" title="Client Short Code">
-                                      {getClientShortCode(c)}
-                                    </span>
-                                    <span className="bg-white/10 text-gray-300 px-2 py-0.5 rounded-lg font-bold border border-white/5">{c.client_id}</span>
-                                  </div>
+                                  <span className="bg-white/10 text-[#5fb4a9] px-2.5 py-1 rounded-lg font-bold border border-white/5">{c.client_id}</span>
                                 </td>
                                 <td className="py-4 px-2">
                                   <button
@@ -2784,7 +2733,7 @@ export default function Dashboard() {
                                       setAdminInspectedClient(c.client_id);
                                       setAdminInspectTab('genuine');
                                     }}
-                                    className="font-bold text-sm text-left tracking-tight text-[#00ffff] hover:text-white hover:underline transition cursor-pointer"
+                                    className="font-bold text-sm text-left tracking-tight text-[#5fb4a9] hover:text-white hover:underline transition cursor-pointer"
                                     title="Inspect Client Space"
                                   >
                                     {c.business_name} 🔍
@@ -2794,7 +2743,7 @@ export default function Dashboard() {
                                 <td className="py-4 px-2 text-center">
                                   <button
                                     onClick={() => handleToggleClientStatus(c.client_id)}
-                                    className={`inline-block text-[10px] font-bold rounded-xl px-3 py-1 text-center transition duration-150 cursor-pointer select-none border ${c.status === 'active' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white border-white/5 hover:bg-[#5fb4a9]' : 'bg-red-500/100/10 text-red-400 border-red-500/20 hover:bg-red-500/100/25'}`}
+                                    className={`inline-block text-[10px] font-bold rounded-xl px-3 py-1 text-center transition duration-150 cursor-pointer select-none border ${c.status === 'active' ? 'bg-[#096260] text-white border-[#5fb4a9]/30 hover:bg-[#5fb4a9]' : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/25'}`}
                                   >
                                     {c.status.toUpperCase()} 🔄
                                   </button>
@@ -2812,7 +2761,7 @@ export default function Dashboard() {
                                   </button>
                                   <button 
                                     onClick={() => handleOpenEditClient(c)}
-                                    className="text-[#00ffff] hover:text-white p-2 hover:bg-white/5 rounded-xl transition cursor-pointer mr-1"
+                                    className="text-[#5fb4a9] hover:text-white p-2 hover:bg-white/5 rounded-xl transition cursor-pointer mr-1"
                                     title="Edit Client details & subscriptions"
                                   >
                                     <Edit3 size={14} className="inline" />
@@ -2834,437 +2783,174 @@ export default function Dashboard() {
                 </div>
 
                 {/* Master dynamic leads auditor list */}
-                {(() => {
-                  const getAuditDateRanges = () => {
-                    const now = new Date();
-                    
-                    if (adminDateFilter === '7d') {
-                      const currentEnd = new Date(now);
-                      const currentStart = new Date(now);
-                      currentStart.setDate(now.getDate() - 7);
+                <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#082b36] mb-1">Global Raw Webhook Lead Audit Feed</h3>
+                      <p className="text-xs text-gray-400">Incoming webhook inputs across all directories</p>
+                    </div>
 
-                      const prevEnd = new Date(currentStart);
-                      const prevStart = new Date(currentStart);
-                      prevStart.setDate(currentStart.getDate() - 7);
+                    <div className="flex flex-wrap gap-2.5">
+                      {/* Filter by Client */}
+                      <select 
+                        value={adminFilterClient}
+                        onChange={(e) => setAdminFilterClient(e.target.value)}
+                        className="bg-[#d5ecea]/15 text-xs border border-[#096260]/10 rounded-xl py-2 px-3.5 outline-none text-[#082b36] font-semibold transition focus:border-[#096260] focus:ring-1 focus:ring-[#096260]"
+                      >
+                        <option value="">All Tenant Spaces</option>
+                        {clients.map(c => (
+                          <option key={c.client_id} value={c.client_id}>{c.business_name}</option>
+                        ))}
+                      </select>
 
-                      return { currentStart, currentEnd, prevStart, prevEnd, label: 'Last 7 Days vs Previous 7 Days' };
-                    }
+                      {/* Filter by Status */}
+                      <select 
+                        value={adminFilterStatus}
+                        onChange={(e) => setAdminFilterStatus(e.target.value)}
+                        className="bg-[#d5ecea]/15 text-xs border border-[#096260]/10 rounded-xl py-2 px-3.5 outline-none text-[#082b36] font-semibold transition focus:border-[#096260] focus:ring-1 focus:ring-[#096260]"
+                      >
+                        <option value="">All Statuses</option>
+                        <option value="GENUINE">Genuine</option>
+                        <option value="SPAM">Flagged SPAM</option>
+                      </select>
+                    </div>
+                  </div>
 
-                    if (adminDateFilter === '28d') {
-                      const currentEnd = new Date(now);
-                      const currentStart = new Date(now);
-                      currentStart.setDate(now.getDate() - 28);
+                  <div className="flex items-center justify-between border-t border-[#096260]/10 pt-4 mt-2">
+                    <div className="flex items-center gap-3">
+                      {selectedLeadIds.length > 0 && (
+                        <button
+                          onClick={() => handleDeleteLeads(selectedLeadIds)}
+                          className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-lg transition duration-150 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete Selected ({selectedLeadIds.length})</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-                      const prevEnd = new Date(currentStart);
-                      const prevStart = new Date(currentStart);
-                      prevStart.setDate(currentStart.getDate() - 28);
-
-                      return { currentStart, currentEnd, prevStart, prevEnd, label: 'Last 28 Days vs Previous 28 Days' };
-                    }
-
-                    if (adminDateFilter === 'this_month') {
-                      const year = now.getFullYear();
-                      const month = now.getMonth();
-                      
-                      const currentStart = new Date(year, month, 1, 0, 0, 0, 0);
-                      const currentEnd = new Date(now);
-
-                      const prevStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
-                      const prevEnd = new Date(year, month, 0, 23, 59, 59, 999);
-
-                      return { currentStart, currentEnd, prevStart, prevEnd, label: 'This Month vs Last Month' };
-                    }
-
-                    if (adminDateFilter === 'last_month') {
-                      const year = now.getFullYear();
-                      const month = now.getMonth();
-                      
-                      const currentStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
-                      const currentEnd = new Date(year, month, 0, 23, 59, 59, 999);
-
-                      const prevStart = new Date(year, month - 2, 1, 0, 0, 0, 0);
-                      const prevEnd = new Date(year, month - 1, 0, 23, 59, 59, 999);
-
-                      return { currentStart, currentEnd, prevStart, prevEnd, label: 'Last Month vs Month Prior' };
-                    }
-
-                    if (adminDateFilter === 'custom' && adminCustomStartDate && adminCustomEndDate) {
-                      const currentStart = new Date(adminCustomStartDate);
-                      currentStart.setHours(0, 0, 0, 0);
-                      const currentEnd = new Date(adminCustomEndDate);
-                      currentEnd.setHours(23, 59, 59, 999);
-
-                      const diffMs = currentEnd.getTime() - currentStart.getTime();
-                      const prevEnd = new Date(currentStart.getTime() - 1);
-                      const prevStart = new Date(prevEnd.getTime() - diffMs);
-
-                      return { currentStart, currentEnd, prevStart, prevEnd, label: 'Custom Range vs Equal Prior Range' };
-                    }
-
-                    return null;
-                  };
-
-                  const auditDateRanges = getAuditDateRanges();
-
-                  // Base leads filtered by Client & Status
-                  const auditBaseFilteredLeads = leads.filter(l => {
-                    if (adminFilterClient && l.client_id !== adminFilterClient) return false;
-                    if (adminFilterStatus && l.status !== adminFilterStatus) return false;
-                    return true;
-                  });
-
-                  // Final displayed leads filtered by Date range
-                  const displayedAuditLeads = auditBaseFilteredLeads.filter(l => {
-                    if (!auditDateRanges) return true;
-                    const leadDate = new Date(l.created_at);
-                    return leadDate >= auditDateRanges.currentStart && leadDate <= auditDateRanges.currentEnd;
-                  });
-
-                  // Previous period leads comparison
-                  const prevPeriodLeads = auditDateRanges ? auditBaseFilteredLeads.filter(l => {
-                    const leadDate = new Date(l.created_at);
-                    return leadDate >= auditDateRanges.prevStart && leadDate <= auditDateRanges.prevEnd;
-                  }) : [];
-
-                  const auditCurrentCount = displayedAuditLeads.length;
-                  const auditPrevCount = prevPeriodLeads.length;
-                  const auditDiffCount = auditCurrentCount - auditPrevCount;
-                  const auditPercentChange = auditPrevCount > 0 
-                    ? ((auditDiffCount / auditPrevCount) * 100).toFixed(1) 
-                    : (auditCurrentCount > 0 ? '+100' : '0');
-
-                  const auditCurrentGenuine = displayedAuditLeads.filter(l => l.status === 'GENUINE').length;
-                  const auditPrevGenuine = prevPeriodLeads.filter(l => l.status === 'GENUINE').length;
-
-                  return (
-                    <PremiumTiltCard className=" p-6 rounded-3xl border shadow-sm space-y-6">
-                      <div className="flex flex-col gap-4">
-                        {/* Top Row: Title + Searchable Client Dropdown + Status Filter */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div>
-                            <h3 className="text-sm font-extrabold text-white mb-1">Global Raw Webhook Lead Audit Feed</h3>
-                            <p className="text-xs text-gray-400">Incoming webhook inputs across all directories</p>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2.5">
-                            {/* Searchable Client Dropdown */}
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-                                className="bg-[#0d0722]/90 text-xs border border-white/15 rounded-xl py-2 px-3.5 text-white font-semibold flex items-center gap-2 hover:border-[#00ffff]/50 transition cursor-pointer shadow-sm"
-                              >
-                                <Search size={13} className="text-[#00ffff]" />
-                                <span className="max-w-[160px] truncate">
-                                  {adminFilterClient 
-                                    ? (clients.find(c => c.client_id === adminFilterClient)?.business_name || adminFilterClient)
-                                    : 'All Tenant Spaces'
-                                  }
-                                </span>
-                                <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${isClientDropdownOpen ? 'rotate-180' : ''}`} />
-                              </button>
-
-                              {isClientDropdownOpen && (
-                                <div className="absolute right-0 sm:left-0 mt-2 w-64 bg-[#0d0722]/95 border border-white/15 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
-                                  <div className="relative mb-2">
-                                    <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
-                                    <input
-                                      type="text"
-                                      placeholder="Search tenant space..."
-                                      value={adminClientDropdownSearch}
-                                      onChange={(e) => setAdminClientDropdownSearch(e.target.value)}
-                                      className="w-full bg-black/50 border border-white/10 rounded-xl py-1.5 pl-8 pr-3 text-xs text-white placeholder-gray-400 outline-none focus:border-[#00ffff]/50 font-sans"
-                                      autoFocus
-                                    />
-                                  </div>
-
-                                  <div className="max-h-48 overflow-y-auto space-y-1 scrollbar pr-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setAdminFilterClient('');
-                                        setIsClientDropdownOpen(false);
-                                        setAdminClientDropdownSearch('');
-                                      }}
-                                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
-                                        !adminFilterClient ? 'bg-[#b026ff]/20 text-[#00ffff] font-extrabold border border-[#b026ff]/30' : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                                      }`}
-                                    >
-                                      <span>All Tenant Spaces</span>
-                                      {!adminFilterClient && <Check size={14} className="text-[#00ffff]" />}
-                                    </button>
-
-                                    {clients
-                                      .filter(c => {
-                                        if (!adminClientDropdownSearch) return true;
-                                        const q = adminClientDropdownSearch.toLowerCase().trim();
-                                        const sc = getClientShortCode(c).toLowerCase();
-                                        return (
-                                          c.business_name.toLowerCase().includes(q) ||
-                                          c.client_id.toLowerCase().includes(q) ||
-                                          sc.includes(q)
-                                        );
-                                      })
-                                      .map(c => (
-                                        <button
-                                          key={c.client_id}
-                                          type="button"
-                                          onClick={() => {
-                                            setAdminFilterClient(c.client_id);
-                                            setIsClientDropdownOpen(false);
-                                            setAdminClientDropdownSearch('');
-                                          }}
-                                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
-                                            adminFilterClient === c.client_id ? 'bg-[#b026ff]/20 text-[#00ffff] font-extrabold border border-[#b026ff]/30' : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                                          }`}
-                                        >
-                                          <div>
-                                            <div className="flex items-center gap-1.5">
-                                              <span className="font-mono text-[9px] bg-[#b026ff]/30 text-[#00ffff] px-1.5 py-0.5 rounded font-black border border-[#b026ff]/40">
-                                                {getClientShortCode(c)}
-                                              </span>
-                                              <p className="truncate font-bold">{c.business_name}</p>
-                                            </div>
-                                            <p className="text-[9px] text-gray-400 font-mono mt-0.5">{c.client_id}</p>
-                                          </div>
-                                          {adminFilterClient === c.client_id && <Check size={14} className="text-[#00ffff]" />}
-                                        </button>
-                                      ))
-                                    }
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Filter by Status */}
-                            <select 
-                              value={adminFilterStatus}
-                              onChange={(e) => setAdminFilterStatus(e.target.value)}
-                              className="bg-[#0d0722]/90 text-xs border border-white/15 rounded-xl py-2 px-3.5 outline-none text-white font-semibold transition focus:border-[#00ffff]/50 cursor-pointer shadow-sm"
-                            >
-                              <option value="" className="bg-[#0d0722] text-white">All Statuses</option>
-                              <option value="GENUINE" className="bg-[#0d0722] text-emerald-400">Genuine</option>
-                              <option value="SPAM" className="bg-[#0d0722] text-rose-400">Flagged SPAM</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Date Range Filter Preset Buttons & Calendar Custom Picker */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 mr-1 flex items-center gap-1">
-                              <Calendar size={12} className="text-[#00ffff]" /> Date Range:
-                            </span>
-                            
-                            {[
-                              { id: 'all', label: 'All Time' },
-                              { id: '7d', label: 'Last 7 Days' },
-                              { id: '28d', label: 'Last 28 Days' },
-                              { id: 'this_month', label: 'This Month' },
-                              { id: 'last_month', label: 'Last Month' },
-                              { id: 'custom', label: 'Custom Range' },
-                            ].map(btn => (
-                              <button
-                                key={btn.id}
-                                type="button"
-                                onClick={() => setAdminDateFilter(btn.id as any)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                  adminDateFilter === btn.id 
-                                    ? 'bg-[#b026ff]/20 text-[#00ffff] border border-[#b026ff]/40 shadow-sm' 
-                                    : 'bg-black/30 text-gray-300 hover:text-white border border-white/10 hover:bg-white/10'
-                                }`}
-                              >
-                                {btn.label}
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Custom Date Calendar Pickers */}
-                          {adminDateFilter === 'custom' && (
-                            <div className="flex items-center gap-2 animate-in fade-in duration-150">
-                              <input
-                                type="date"
-                                value={adminCustomStartDate}
-                                onChange={(e) => setAdminCustomStartDate(e.target.value)}
-                                className="bg-black/50 border border-white/15 rounded-xl py-1 px-2.5 text-xs text-white outline-none focus:border-[#00ffff]/50 font-mono"
-                              />
-                              <span className="text-gray-400 text-xs">to</span>
-                              <input
-                                type="date"
-                                value={adminCustomEndDate}
-                                onChange={(e) => setAdminCustomEndDate(e.target.value)}
-                                className="bg-black/50 border border-white/15 rounded-xl py-1 px-2.5 text-xs text-white outline-none focus:border-[#00ffff]/50 font-mono"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Previous Period Comparison Banner */}
-                        {auditDateRanges && (
-                          <div className="bg-[#b026ff]/10 border border-[#b026ff]/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 animate-in fade-in duration-200 shadow-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#b026ff]/20 text-[#00ffff] flex items-center justify-center font-bold border border-[#b026ff]/30 shrink-0">
-                                <TrendingUp size={18} />
-                              </div>
-                              <div>
-                                <p className="text-[10px] font-mono uppercase tracking-wider text-[#00ffff] font-extrabold">{auditDateRanges.label}</p>
-                                <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
-                                  <span className="text-white font-semibold">
-                                    Current Period: <strong className="text-[#00ffff] font-black text-sm">{auditCurrentCount}</strong> leads ({auditCurrentGenuine} Genuine)
-                                  </span>
-                                  <span className="text-gray-500">|</span>
-                                  <span className="text-gray-300">
-                                    Previous Period: <strong className="text-white font-bold">{auditPrevCount}</strong> leads ({auditPrevGenuine} Genuine)
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-black/50 border border-white/15 font-mono text-xs font-black shadow-inner">
-                              <span className="text-gray-400 uppercase text-[9px] tracking-wider">Lead Volume Shift:</span>
-                              {auditDiffCount > 0 ? (
-                                <span className="text-emerald-400 flex items-center gap-1 font-bold">
-                                  +{auditDiffCount} ({auditPercentChange}%) <ArrowUpRight size={15} />
-                                </span>
-                              ) : auditDiffCount < 0 ? (
-                                <span className="text-rose-400 flex items-center gap-1 font-bold">
-                                  {auditDiffCount} ({auditPercentChange}%) <ArrowDownRight size={15} />
-                                </span>
-                              ) : (
-                                <span className="text-cyan-300 flex items-center gap-1 font-bold">
-                                  0 (0.0%) <Minus size={15} />
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-2">
-                        <div className="flex items-center gap-3">
-                          {selectedLeadIds.length > 0 && (
-                            <button
-                              onClick={() => handleDeleteLeads(selectedLeadIds)}
-                              className="bg-red-500/100 hover:bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-lg transition duration-150 flex items-center gap-2 cursor-pointer"
-                            >
-                              <Trash2 size={14} />
-                              <span>Delete Selected ({selectedLeadIds.length})</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto rounded-2xl border border-white/10">
-                        <table className="w-full text-left text-xs text-white border-collapse">
-                          <thead>
-                            <tr className="border-b border-white/10 text-[10px] text-[#00ffff]/85 font-mono uppercase tracking-widest bg-transparent">
-                              <th className="p-4 rounded-tl-2xl w-10">
-                                <input 
-                                  type="checkbox"
-                                  onChange={(e) => {
-                                    const visibleIds = displayedAuditLeads.map(l => l.id);
-                                    if (e.target.checked) {
-                                      setSelectedLeadIds(prev => Array.from(new Set([...prev, ...visibleIds])));
-                                    } else {
-                                      setSelectedLeadIds(prev => prev.filter(id => !visibleIds.includes(id)));
-                                    }
-                                  }}
-                                  checked={
-                                    displayedAuditLeads.length > 0 &&
-                                    displayedAuditLeads.every(l => selectedLeadIds.includes(l.id))
-                                  }
-                                  className="w-4 h-4 rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] cursor-pointer"
-                                />
-                              </th>
-                              <th className="p-4">Caught (UTC)</th>
-                              <th className="p-4">Client Space</th>
-                              <th className="p-4">Channel</th>
-                              <th className="p-4">Payload Summary</th>
-                              <th className="p-4">Verdict</th>
-                              <th className="p-4">Feedback</th>
-                              <th className="p-4 text-right rounded-tr-2xl">Raw Fields</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#096260]/5">
-                            {displayedAuditLeads.map(l => {
-                              const clientDetail = clients.find(c => c.client_id === l.client_id);
-                              return (
-                                <tr key={l.id} className="hover:bg-transparent transition">
-                                  <td className="p-4">
-                                    <input 
-                                      type="checkbox"
-                                      checked={selectedLeadIds.includes(l.id)}
-                                      onChange={() => toggleSelectLead(l.id)}
-                                      className="w-4 h-4 rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] cursor-pointer"
-                                    />
-                                  </td>
-                                  <td className="p-4 text-[10px] font-mono text-gray-400 whitespace-nowrap">{l.created_at}</td>
-                                  <td className="p-4">
-                                    <p className="font-extrabold text-[#00ffff] hover:text-white transition cursor-pointer">{clientDetail?.business_name || l.client_id}</p>
-                                    <p className="text-[9px] text-gray-400 font-mono font-bold uppercase tracking-wider block mt-0.5">{l.client_id}</p>
-                                  </td>
-                                  <td className="p-4">
-                                    {l.channel === 'google_ads' && (
-                                      <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">🎯 GOOGLE</span>
-                                    )}
-                                    {l.channel === 'facebook_ads' && (
-                                      <span className="bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">👥 FACEBOOK</span>
-                                    )}
-                                    {l.channel === 'gmb' && (
-                                      <span className="bg-[#b026ff]/20 text-[#b026ff] border border-[#b026ff]/40 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">💎 GMB MAPS</span>
-                                    )}
-                                    {(!l.channel || l.channel === 'website') && (
-                                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">🌐 WEBSITE</span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 text-[11px] max-w-xs truncate font-mono text-gray-300">
-                                    {Object.entries(l.form_data).slice(0, 2).map(([k, v]) => (
-                                      <span key={k} className="mr-2 inline-block">
-                                        <span className="text-gray-400">{k}:</span> <strong className="text-gray-300 font-bold">{String(v)}</strong>
-                                      </span>
-                                    ))}
-                                  </td>
-                                  <td className="p-4">
-                                    <span className={`inline-block py-1 px-3 rounded-full text-[9px] font-extrabold uppercase tracking-wide border ${l.status === 'GENUINE' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white border-white/5' : 'bg-orange-500/10 text-orange-600 border-orange-500/10'}`}>
-                                      {l.status}
+                  <div className="overflow-x-auto rounded-2xl border border-[#096260]/5">
+                    <table className="w-full text-left text-xs text-[#082b36] border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#096260]/10 text-[10px] text-[#096260]/85 font-mono uppercase tracking-widest bg-[#d5ecea]/20">
+                          <th className="p-4 rounded-tl-2xl w-10">
+                            <input 
+                              type="checkbox"
+                              onChange={(e) => {
+                                const visibleIds = leads
+                                  .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                                  .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                                  .map(l => l.id);
+                                if (e.target.checked) {
+                                  setSelectedLeadIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+                                } else {
+                                  setSelectedLeadIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                }
+                              }}
+                              checked={
+                                leads
+                                  .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                                  .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                                  .length > 0 &&
+                                leads
+                                  .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                                  .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                                  .every(l => selectedLeadIds.includes(l.id))
+                              }
+                              className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
+                            />
+                          </th>
+                          <th className="p-4">Caught (UTC)</th>
+                          <th className="p-4">Client Space</th>
+                          <th className="p-4">Channel</th>
+                          <th className="p-4">Payload Summary</th>
+                          <th className="p-4">Verdict</th>
+                          <th className="p-4">Feedback</th>
+                          <th className="p-4 text-right rounded-tr-2xl">Raw Fields</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#096260]/5">
+                        {leads
+                          .filter(l => !adminFilterClient || l.client_id === adminFilterClient)
+                          .filter(l => !adminFilterStatus || l.status === adminFilterStatus)
+                          .map(l => {
+                            const clientDetail = clients.find(c => c.client_id === l.client_id);
+                            return (
+                              <tr key={l.id} className="hover:bg-[#d5ecea]/10 transition">
+                                <td className="p-4">
+                                  <input 
+                                    type="checkbox"
+                                    checked={selectedLeadIds.includes(l.id)}
+                                    onChange={() => toggleSelectLead(l.id)}
+                                    className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
+                                  />
+                                </td>
+                                <td className="p-4 text-[10px] font-mono text-gray-400 whitespace-nowrap">{l.created_at}</td>
+                                <td className="p-4">
+                                  <p className="font-extrabold text-[#082b36]">{clientDetail?.business_name || l.client_id}</p>
+                                  <p className="text-[9px] text-[#096260]/80 font-mono font-bold uppercase tracking-wider block mt-0.5">{l.client_id}</p>
+                                </td>
+                                <td className="p-4">
+                                  {l.channel === 'google_ads' && (
+                                    <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">🎯 GOOGLE</span>
+                                  )}
+                                  {l.channel === 'facebook_ads' && (
+                                    <span className="bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">👥 FACEBOOK</span>
+                                  )}
+                                  {l.channel === 'gmb' && (
+                                    <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">💎 GMB MAPS</span>
+                                  )}
+                                  {(!l.channel || l.channel === 'website') && (
+                                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg text-[9px] font-black font-mono tracking-tight whitespace-nowrap">🌐 WEBSITE</span>
+                                  )}
+                                </td>
+                                <td className="p-4 text-[11px] max-w-xs truncate font-mono text-gray-600">
+                                  {Object.entries(l.form_data).slice(0, 2).map(([k, v]) => (
+                                    <span key={k} className="mr-2 inline-block">
+                                      <span className="text-gray-400">{k}:</span> <strong className="text-gray-700 font-bold">{String(v)}</strong>
                                     </span>
-                                  </td>
-                                  <td className="p-4">
-                                    {(() => {
-                                      const fb = leadFeedbacks.find(f => f.lead_id === l.id);
-                                      if (!fb) return <span className="text-gray-400 text-[10px] italic">No Feedback</span>;
-                                      if (fb.status === 'converted') return <span className="text-green-600 bg-green-500/10 border border-green-500/30 px-2 py-1 rounded text-[10px] font-bold">✅ Converted</span>;
-                                      if (fb.status === 'not_converted') return <span className="text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-1 rounded text-[10px] font-bold">❌ Not Converted</span>;
-                                      return <span className="text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded text-[10px] font-bold">⏳ Pending</span>;
-                                    })()}
-                                  </td>
-                                  <td className="p-4 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <button
-                                        onClick={() => handleDeleteLeads([l.id])}
-                                        className="text-red-400 hover:text-white hover:bg-red-500/100 p-1.5 rounded-xl transition duration-150 cursor-pointer"
-                                        title="Delete Lead permanently"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                      <button
-                                        onClick={() => setSelectedAuditLead(l)}
-                                        className="text-[10px] bg-transparent hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white py-1.5 px-3.5 rounded-xl transition duration-150 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
-                                      >
-                                        <Eye size={12} />
-                                        <span>Payload</span>
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </PremiumTiltCard>
-                  );
-                })()}
+                                  ))}
+                                </td>
+                                <td className="p-4">
+                                  <span className={`inline-block py-1 px-3 rounded-full text-[9px] font-extrabold uppercase tracking-wide border ${l.status === 'GENUINE' ? 'bg-[#096260] text-white border-[#5fb4a9]/30' : 'bg-orange-500/10 text-orange-600 border-orange-500/10'}`}>
+                                    {l.status}
+                                  </span>
+                                </td>
+                                <td className="p-4">
+                                  {(() => {
+                                    const fb = leadFeedbacks.find(f => f.lead_id === l.id);
+                                    if (!fb) return <span className="text-gray-400 text-[10px] italic">No Feedback</span>;
+                                    if (fb.status === 'converted') return <span className="text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded text-[10px] font-bold">✅ Converted</span>;
+                                    if (fb.status === 'not_converted') return <span className="text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded text-[10px] font-bold">❌ Not Converted</span>;
+                                    return <span className="text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded text-[10px] font-bold">⏳ Pending</span>;
+                                  })()}
+                                </td>
+                                <td className="p-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => handleDeleteLeads([l.id])}
+                                      className="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-xl transition duration-150 cursor-pointer"
+                                      title="Delete Lead permanently"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => setSelectedAuditLead(l)}
+                                      className="text-[10px] bg-[#082b36] hover:bg-[#096260] text-white py-1.5 px-3.5 rounded-xl transition duration-150 font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                                    >
+                                      <Eye size={12} />
+                                      <span>Payload</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
               </div>
             ) : (
@@ -3275,13 +2961,13 @@ export default function Dashboard() {
               <div className="space-y-6">
                 
                 {/* Simulated session header bar */}
-                <div className="bg-transparent text-white p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 border border-white/5 shadow-xl select-none">
+                <div className="bg-[#082b36] text-white p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 border border-white/5 shadow-xl select-none">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 rounded-lg flex items-center justify-center border border-white/5 text-white font-bold text-sm">
+                    <div className="w-8 h-8 bg-[#096260] rounded-lg flex items-center justify-center border border-[#5fb4a9]/30 text-white font-bold text-sm">
                       🏢
                     </div>
                     <div>
-                      <p className="text-[10px] text-[#00ffff] font-mono tracking-widest font-bold leading-none uppercase">CLIENT PORTAL WORKSPACE INSTANCE</p>
+                      <p className="text-[10px] text-[#5fb4a9] font-mono tracking-widest font-bold leading-none uppercase">CLIENT PORTAL WORKSPACE INSTANCE</p>
                       <h2 className="text-base font-extrabold text-white mt-1">
                         {clients.find(c => c.client_id === loggedInUser.client_id)?.business_name || loggedInUser.client_id}
                       </h2>
@@ -3291,16 +2977,16 @@ export default function Dashboard() {
                         return (
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                             {client.has_seo && (
-                              <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-white/5">SEO TRACKS</span>
+                              <span className="bg-[#096260] text-[#5fb4a9] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-[#5fb4a9]/20">SEO TRACKS</span>
                             )}
                             {client.has_google_ads && (
-                              <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-white/5">GOOGLE ADS</span>
+                              <span className="bg-[#096260] text-[#5fb4a9] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-[#5fb4a9]/20">GOOGLE ADS</span>
                             )}
                             {client.has_fb_ads && (
-                              <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-white/5">FACEBOOK ADS</span>
+                              <span className="bg-[#096260] text-[#5fb4a9] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-[#5fb4a9]/20">FACEBOOK ADS</span>
                             )}
                             {client.has_gmb && (
-                              <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-white/5">GMB VERIFICATION</span>
+                              <span className="bg-[#096260] text-[#5fb4a9] text-[8px] font-bold font-mono px-2 py-0.5 rounded border border-[#5fb4a9]/20">GMB VERIFICATION</span>
                             )}
                           </div>
                         );
@@ -3371,7 +3057,7 @@ export default function Dashboard() {
                         {clientChannelFilter !== 'all' && (
                           <button 
                             onClick={() => setClientChannelFilter('all')}
-                            className="text-[10px] bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] px-2 py-1 rounded-lg border border-white/10 font-extrabold transition cursor-pointer"
+                            className="text-[10px] bg-[#096260]/10 hover:bg-[#096260]/20 text-[#096260] px-2 py-1 rounded-lg border border-[#096260]/20 font-extrabold transition cursor-pointer"
                           >
                             All Streams ✕
                           </button>
@@ -3382,16 +3068,16 @@ export default function Dashboard() {
                         {/* 1. All feeds */}
                         <div 
                           onClick={() => setClientChannelFilter('all')}
-                          className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'all' ? 'border-white/10 bg-transparent shadow-sm' : 'border-white/10 bg-black/20 hover:border-white/10'}`}
+                          className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'all' ? 'border-[#096260] bg-[#d5ecea]/25 shadow-sm' : 'border-[#096260]/5 bg-white hover:border-[#096260]/20'}`}
                         >
                           <div className="flex justify-between items-start">
                             <span className="text-lg">⚡</span>
-                            <span className="text-[8px] bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">ALL</span>
+                            <span className="text-[8px] bg-[#096260]/10 text-[#096260] px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">ALL</span>
                           </div>
-                          <h4 className="text-xs font-black text-white mt-2 mb-0.5 truncate">Total Feed</h4>
-                          <p className="text-[9px] text-[#00ffff] font-mono leading-none tracking-tight">Combined streams</p>
-                          <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-white/10">
-                            <span className="text-[#00ffff]">🎁 {metrics.all.genuine}</span>
+                          <h4 className="text-xs font-black text-[#082b36] mt-2 mb-0.5 truncate">Total Feed</h4>
+                          <p className="text-[9px] text-[#5fb4a9] font-mono leading-none tracking-tight">Combined streams</p>
+                          <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-[#096260]/15">
+                            <span className="text-[#096260]">🎁 {metrics.all.genuine}</span>
                             <span className="text-red-500">🛡️ {metrics.all.spam}</span>
                           </div>
                         </div>
@@ -3400,15 +3086,15 @@ export default function Dashboard() {
                         {clientObj.has_seo && (
                           <div 
                             onClick={() => setClientChannelFilter('website')}
-                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'website' ? 'border-blue-600 bg-blue-50/20 shadow-sm' : 'border-white/10 bg-black/20 hover:border-blue-500/20'}`}
+                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'website' ? 'border-blue-600 bg-blue-50/20 shadow-sm' : 'border-[#096260]/5 bg-white hover:border-blue-500/20'}`}
                           >
                             <div className="flex justify-between items-start">
                               <span className="text-lg">🌐</span>
                               <span className="text-[8px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">SEO</span>
                             </div>
-                            <h4 className="text-xs font-black text-white mt-2 mb-0.5 truncate">Website Leads</h4>
+                            <h4 className="text-xs font-black text-[#082b36] mt-2 mb-0.5 truncate">Website Leads</h4>
                             <p className="text-[9px] text-gray-400 font-mono leading-none tracking-tight">Organic forms lookup</p>
-                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-white/10">
+                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-[#096260]/15">
                               <span className="text-blue-600">📬 {metrics.website.genuine}</span>
                               <span className="text-red-400">🛡️ {metrics.website.spam}</span>
                             </div>
@@ -3419,15 +3105,15 @@ export default function Dashboard() {
                         {clientObj.has_google_ads && (
                           <div 
                             onClick={() => setClientChannelFilter('google_ads')}
-                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'google_ads' ? 'border-amber-500 bg-amber-50/20 shadow-sm' : 'border-white/10 bg-black/20 hover:border-amber-500/20'}`}
+                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'google_ads' ? 'border-amber-500 bg-amber-50/20 shadow-sm' : 'border-[#096260]/5 bg-white hover:border-amber-500/20'}`}
                           >
                             <div className="flex justify-between items-start">
                               <span className="text-lg">🎯</span>
                               <span className="text-[8px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">CPC</span>
                             </div>
-                            <h4 className="text-xs font-black text-white mt-2 mb-0.5 truncate">Google Ads</h4>
+                            <h4 className="text-xs font-black text-[#082b36] mt-2 mb-0.5 truncate">Google Ads</h4>
                             <p className="text-[9px] text-gray-400 font-mono leading-none tracking-tight">Paid search clicks</p>
-                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-white/10">
+                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-[#096260]/15">
                               <span className="text-amber-600">📬 {metrics.google_ads.genuine}</span>
                               <span className="text-red-400">🛡️ {metrics.google_ads.spam}</span>
                             </div>
@@ -3438,15 +3124,15 @@ export default function Dashboard() {
                         {clientObj.has_fb_ads && (
                           <div 
                             onClick={() => setClientChannelFilter('facebook_ads')}
-                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'facebook_ads' ? 'border-indigo-600 bg-indigo-50/20 shadow-sm' : 'border-white/10 bg-black/20 hover:border-indigo-500/20'}`}
+                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'facebook_ads' ? 'border-indigo-600 bg-indigo-50/20 shadow-sm' : 'border-[#096260]/5 bg-white hover:border-indigo-500/20'}`}
                           >
                             <div className="flex justify-between items-start">
                               <span className="text-lg">👥</span>
                               <span className="text-[8px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">META</span>
                             </div>
-                            <h4 className="text-xs font-black text-white mt-2 mb-0.5 truncate">Facebook Ads</h4>
+                            <h4 className="text-xs font-black text-[#082b36] mt-2 mb-0.5 truncate">Facebook Ads</h4>
                             <p className="text-[9px] text-gray-400 font-mono leading-none tracking-tight">Social leads tracking</p>
-                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-white/10">
+                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-[#096260]/15">
                               <span className="text-indigo-600">📬 {metrics.facebook_ads.genuine}</span>
                               <span className="text-red-400">🛡️ {metrics.facebook_ads.spam}</span>
                             </div>
@@ -3457,16 +3143,16 @@ export default function Dashboard() {
                         {clientObj.has_gmb && (
                           <div 
                             onClick={() => setClientChannelFilter('gmb')}
-                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'gmb' ? 'border-purple-600 bg-[#b026ff]/10/20 shadow-sm' : 'border-white/10 bg-black/20 hover:border-purple-500/20'}`}
+                            className={`p-4 rounded-3xl border-2 transition-all duration-150 cursor-pointer select-none ${clientChannelFilter === 'gmb' ? 'border-purple-600 bg-purple-50/20 shadow-sm' : 'border-[#096260]/5 bg-white hover:border-purple-500/20'}`}
                           >
                             <div className="flex justify-between items-start">
                               <span className="text-lg">💎</span>
-                              <span className="text-[8px] bg-[#b026ff]/10 text-[#b026ff] px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">MAPS</span>
+                              <span className="text-[8px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wide">MAPS</span>
                             </div>
-                            <h4 className="text-xs font-black text-white mt-2 mb-0.5 truncate">GMB Profile</h4>
+                            <h4 className="text-xs font-black text-[#082b36] mt-2 mb-0.5 truncate">GMB Profile</h4>
                             <p className="text-[9px] text-gray-400 font-mono leading-none tracking-tight">Phone call capture</p>
-                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-white/10">
-                              <span className="text-[#b026ff]">📬 {metrics.gmb.genuine}</span>
+                            <div className="flex justify-between items-center text-[10px] font-mono font-bold mt-3 pt-2 border-t border-[#096260]/15">
+                              <span className="text-purple-600">📬 {metrics.gmb.genuine}</span>
                               <span className="text-red-400">🛡️ {metrics.gmb.spam}</span>
                             </div>
                           </div>
@@ -3477,15 +3163,15 @@ export default function Dashboard() {
                 })()}
 
                 {/* Isolated lead feed with export utilities */}
-                <PremiumTiltCard className=" rounded-3xl border  shadow-sm overflow-hidden flex flex-col">
+                <div className="bg-white rounded-3xl border border-[#096260]/5 shadow-sm overflow-hidden flex flex-col">
                   
                   {/* Filter tab bar */}
-                  <div className="border-b border-white/10 p-5 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="border-b border-[#096260]/5 p-5 bg-[#d5ecea]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     
-                    <div className="flex flex-wrap gap-1.5 p-1 bg-white/60 backdrop-blur rounded-2xl self-start border border-white/10">
+                    <div className="flex flex-wrap gap-1.5 p-1 bg-white/60 backdrop-blur rounded-2xl self-start border border-[#096260]/10">
                       <button 
                         onClick={() => setClientActiveTab('genuine')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${clientActiveTab === 'genuine' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-md border border-white/5' : 'text-white/60 hover:text-white hover:bg-white/20'}`}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${clientActiveTab === 'genuine' ? 'bg-[#096260] text-white shadow-md border border-[#5fb4a9]/20' : 'text-[#082b36]/60 hover:text-[#082b36] hover:bg-white/20'}`}
                       >
                         📬 Genuine Leads ({
                           leads
@@ -3499,7 +3185,7 @@ export default function Dashboard() {
                       </button>
                       <button 
                         onClick={() => setClientActiveTab('spam')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${clientActiveTab === 'spam' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-md border border-white/5' : 'text-white/60 hover:text-white hover:bg-white/20'}`}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${clientActiveTab === 'spam' ? 'bg-[#096260] text-white shadow-md border border-[#5fb4a9]/20' : 'text-[#082b36]/60 hover:text-[#082b36] hover:bg-white/20'}`}
                       >
                         🛡️ Spam Gating Shield ({
                           leads
@@ -3517,7 +3203,7 @@ export default function Dashboard() {
                       {selectedLeadIds.length > 0 && (
                         <button
                           onClick={() => handleDeleteLeads(selectedLeadIds)}
-                          className="bg-red-500/100 hover:bg-red-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg transition duration-150 flex items-center gap-2 cursor-pointer"
+                          className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg transition duration-150 flex items-center gap-2 cursor-pointer"
                         >
                           <Trash2 size={14} />
                           <span>Delete Selected ({selectedLeadIds.length})</span>
@@ -3525,7 +3211,7 @@ export default function Dashboard() {
                       )}
                       <button 
                         onClick={() => handleTriggerCsvExport(clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE')}
-                        className="bg-transparent hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#082b36]/15 transition duration-150 flex items-center gap-2 self-start cursor-pointer hover:translate-y-[-1px]"
+                        className="bg-[#082b36] hover:bg-[#096260] text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-[#082b36]/15 transition duration-150 flex items-center gap-2 self-start cursor-pointer hover:translate-y-[-1px]"
                       >
                         <Download size={14} />
                         <span>Export Filtered Current Grid (CSV)</span>
@@ -3537,7 +3223,7 @@ export default function Dashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-white/10 text-[10px] text-[#00ffff]/85 font-mono uppercase tracking-widest bg-transparent">
+                        <tr className="border-b border-[#096260]/10 text-[10px] text-[#096260]/85 font-mono uppercase tracking-widest bg-[#d5ecea]/20">
                           <th className="p-4 w-10">
                             <input 
                               type="checkbox"
@@ -3574,7 +3260,7 @@ export default function Dashboard() {
                                   .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE'))
                                   .every(l => selectedLeadIds.includes(l.id))
                               }
-                              className="w-4 h-4 rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] cursor-pointer"
+                              className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
                             />
                           </th>
                           <th className="p-4 w-36">Catch Time (UTC)</th>
@@ -3595,13 +3281,13 @@ export default function Dashboard() {
                           })
                           .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE'))
                           .map(l => (
-                            <tr key={l.id} className="hover:bg-transparent transition">
+                            <tr key={l.id} className="hover:bg-[#d5ecea]/10 transition">
                               <td className="p-4">
                                 <input 
                                   type="checkbox"
                                   checked={selectedLeadIds.includes(l.id)}
                                   onChange={() => toggleSelectLead(l.id)}
-                                  className="w-4 h-4 rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] cursor-pointer"
+                                  className="w-4 h-4 rounded border-gray-300 text-[#096260] focus:ring-[#096260] cursor-pointer"
                                 />
                               </td>
                               <td className="p-4 font-mono text-[10px] text-gray-400 whitespace-nowrap">{l.created_at}</td>
@@ -3613,15 +3299,15 @@ export default function Dashboard() {
                                   } else if (ch === 'facebook_ads') {
                                     return <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[9px] px-2 py-1 rounded-xl border border-indigo-200 font-extrabold font-sans">👥 Facebook Ads</span>;
                                   } else if (ch === 'gmb') {
-                                    return <span className="inline-flex items-center gap-1 bg-[#b026ff]/10 text-[#b026ff] text-[9px] px-2 py-1 rounded-xl border border-[#b026ff]/40 font-extrabold font-sans">💎 Google GMB</span>;
+                                    return <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] px-2 py-1 rounded-xl border border-purple-200 font-extrabold font-sans">💎 Google GMB</span>;
                                   } else {
                                     return <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[9px] px-2 py-1 rounded-xl border border-blue-200 font-extrabold font-sans">🌐 SEO Website</span>;
                                   }
                                 })()}
                               </td>
                               <td className="p-4 text-xs">
-                                <div className="bg-transparent text-[#d5ecea] font-mono text-[11px] p-4 rounded-xl border border-white/10 max-w-xl leading-relaxed shadow-inner overflow-x-auto">
-                                  <div className="mb-3 text-[#00ffff] font-bold tracking-widest uppercase text-[9px]">Details of the Person</div>
+                                <div className="bg-[#082b36] text-[#d5ecea] font-mono text-[11px] p-4 rounded-xl border border-[#096260]/30 max-w-xl leading-relaxed shadow-inner overflow-x-auto">
+                                  <div className="mb-3 text-[#5fb4a9] font-bold tracking-widest uppercase text-[9px]">Details of the Person</div>
                                   <div className="space-y-1 whitespace-pre-wrap">
                                     {Object.entries(l.form_data).map(([k, v]) => {
                                       const keyName = k.replace(/_/g, ' ');
@@ -3629,12 +3315,12 @@ export default function Dashboard() {
                                       const displayKey = keyName.charAt(0).toUpperCase() + keyName.slice(1);
                                       return (
                                         <div key={k}>
-                                          <span className="text-[#00ffff]/80 capitalize">{displayKey}:</span> {String(v)}
+                                          <span className="text-[#5fb4a9]/80 capitalize">{displayKey}:</span> {String(v)}
                                         </div>
                                       );
                                     })}
                                   </div>
-                                  <div className="mt-5 text-[#00ffff]/50 pt-3 border-t border-white/10 text-[10px]">
+                                  <div className="mt-5 text-[#5fb4a9]/50 pt-3 border-t border-[#096260]/20 text-[10px]">
                                     --<br/>
                                     This is a notification that a contact form was submitted on your website ({loggedInUser.client_id ? clients.find(c => c.client_id === loggedInUser.client_id)?.business_name || 'Website' : 'Website'}).
                                   </div>
@@ -3643,8 +3329,8 @@ export default function Dashboard() {
                               
                               {clientActiveTab === 'spam' && (
                                 <td className="p-4">
-                                  <div className="bg-red-500/100/10 text-red-400 p-3 rounded-xl border border-red-500/10 text-xs max-w-xs leading-relaxed space-y-0.5">
-                                    <p className="font-bold uppercase text-[9px] text-red-400 tracking-wider">AI Guard Gating Reason</p>
+                                  <div className="bg-red-500/10 text-red-950 p-3 rounded-xl border border-red-500/10 text-xs max-w-xs leading-relaxed space-y-0.5">
+                                    <p className="font-bold uppercase text-[9px] text-red-950 tracking-wider">AI Guard Gating Reason</p>
                                     <p className="italic text-xs font-semibold">"{l.ai_reason || 'Unspecified bulk pattern match.'}"</p>
                                   </div>
                                 </td>
@@ -3654,7 +3340,7 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-end gap-2.5">
                                   <button
                                     onClick={() => handleDeleteLeads([l.id])}
-                                    className="text-red-400 hover:text-white hover:bg-red-500/100 p-1.5 rounded-xl transition duration-150 cursor-pointer"
+                                    className="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-xl transition duration-150 cursor-pointer"
                                     title="Delete Lead permanently"
                                   >
                                     <Trash2 size={14} />
@@ -3662,19 +3348,19 @@ export default function Dashboard() {
                                   {clientActiveTab === 'spam' ? (
                                     <button 
                                       onClick={() => handleMarkAsGenuine(l.id)}
-                                      className="bg-transparent hover:bg-[#5fb4a9] text-[#00ffff] hover:text-white font-extrabold text-[11px] py-2 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1 shadow-sm border border-white/10"
+                                      className="bg-[#d5ecea] hover:bg-[#5fb4a9] text-[#096260] hover:text-white font-extrabold text-[11px] py-2 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1 shadow-sm border border-[#096260]/10"
                                     >
                                       <Check size={12} />
                                       <span>Mark as Genuine</span>
                                     </button>
                                   ) : (
                                     <>
-                                      <span className="inline-block bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] font-mono font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg border border-white/10 shadow-xs uppercase tracking-wide">
+                                      <span className="inline-block bg-[#096260]/10 text-[#096260] font-mono font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg border border-[#096260]/10 shadow-xs uppercase tracking-wide">
                                         INBOX READY
                                       </span>
                                       <button 
                                         onClick={() => handleMarkAsSpam(l.id)}
-                                        className="bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white font-extrabold text-[11px] py-1.5 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1.5 shadow-sm border border-red-500/15"
+                                        className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-extrabold text-[11px] py-1.5 px-3 rounded-xl transition duration-150 cursor-pointer inline-flex items-center gap-1.5 shadow-sm border border-red-500/15"
                                         title="Flag this lead manually as SPAM"
                                       >
                                         <AlertTriangle size={12} />
@@ -3695,7 +3381,7 @@ export default function Dashboard() {
                           })
                           .filter(l => l.status === (clientActiveTab === 'spam' ? 'SPAM' : 'GENUINE')).length === 0 && (
                           <tr>
-                            <td colSpan={clientActiveTab === 'spam' ? 5 : 4} className="p-12 text-center text-xs text-white/50 italic bg-transparent select-none rounded-b-3xl">
+                            <td colSpan={clientActiveTab === 'spam' ? 5 : 4} className="p-12 text-center text-xs text-[#082b36]/50 italic bg-[#d5ecea]/5 select-none rounded-b-3xl">
                               No leads detected inside this channel view. Send a simulated payload from the "n8n Webhook Lab" panel with this channel!
                             </td>
                           </tr>
@@ -3703,7 +3389,7 @@ export default function Dashboard() {
                       </tbody>
                     </table>
                   </div>
-                </PremiumTiltCard>
+                </div>
 
                 {/* If Client has GMB subscription, display GMB Monthly performance tracking module */}
                 {(() => {
@@ -3728,27 +3414,27 @@ export default function Dashboard() {
           <div className="flex-1 p-6 md:p-8 space-y-8 animate-fadeIn">
             
             {/* Header / Intro section */}
-            <PremiumTiltCard className=" rounded-3xl border  p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+            <div className="bg-white rounded-3xl border border-[#096260]/10 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
               <div className="space-y-1">
-                <span className="inline-block bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider font-mono">Workflow Manager</span>
-                <h2 className="text-xl font-bold text-white">n8n Advanced Redundancy & Automation Hub</h2>
-                <p className="text-xs text-white/70 leading-relaxed font-normal">
+                <span className="inline-block bg-[#096260]/10 text-[#096260] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider font-mono">Workflow Manager</span>
+                <h2 className="text-xl font-bold text-[#082b36]">n8n Advanced Redundancy & Automation Hub</h2>
+                <p className="text-xs text-[#082b36]/70 leading-relaxed font-normal">
                   Configure real-time form webhook triggers, 4x consecutive Gemini failover prompt algorithms, OpenAI guard fallbacks, and multi-tenant email forwarding parameters without logging into n8n.
                 </p>
               </div>
-              <div className="bg-transparent px-4 py-3 rounded-2xl border border-white/10 text-xs font-semibold shrink-0">
+              <div className="bg-[#d5ecea]/40 px-4 py-3 rounded-2xl border border-[#096260]/10 text-xs font-semibold shrink-0">
                 🚀 Multi-Agent Redundancy Enabled (4x Gemini Slots + 1x OpenAI Reserve)
               </div>
-            </PremiumTiltCard>
+            </div>
 
             {/* Core Bento Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               
               {/* Left Column: Form Editor (8 of 12 columns) */}
-              <PremiumTiltCard className="lg:col-span-7  rounded-3xl border  overflow-hidden shadow-sm flex flex-col">
-                <div className="bg-transparent p-5 text-white flex justify-between items-center border-b border-[#03212a]">
+              <div className="lg:col-span-7 bg-white rounded-3xl border border-[#096260]/10 overflow-hidden shadow-sm flex flex-col">
+                <div className="bg-[#082b36] p-5 text-white flex justify-between items-center border-b border-[#03212a]">
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-widest text-[#00ffff] font-mono">Workspace Provisioner & Rule Editor</h3>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-[#5fb4a9] font-mono">Workspace Provisioner & Rule Editor</h3>
                     <p className="text-xs text-slate-300 mt-1">Configure active failover routing tables for each registered client</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -3756,7 +3442,7 @@ export default function Dashboard() {
                     <select
                       value={selConfigClientId}
                       onChange={(e) => setSelConfigClientId(e.target.value)}
-                      className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-extrabold rounded-xl py-1.5 px-3.5 border border-white/20 outline-none cursor-pointer"
+                      className="bg-[#096260] text-white text-xs font-extrabold rounded-xl py-1.5 px-3.5 border border-white/20 outline-none cursor-pointer"
                     >
                       {clients.map(c => (
                         <option key={c.client_id} value={c.client_id}>
@@ -3770,8 +3456,8 @@ export default function Dashboard() {
                 <form onSubmit={handleSaveN8nConfig} className="p-6 space-y-6 flex-1">
                   
                   {/* Webhook endpoint block */}
-                  <div className="bg-transparent p-4 rounded-2xl border border-white/10 space-y-2">
-                    <label className="block text-[10px] font-extrabold text-[#00ffff] uppercase tracking-widest font-mono">Target n8n Webhook Node Trigger URL</label>
+                  <div className="bg-[#d5ecea]/20 p-4 rounded-2xl border border-[#096260]/5 space-y-2">
+                    <label className="block text-[10px] font-extrabold text-[#096260] uppercase tracking-widest font-mono">Target n8n Webhook Node Trigger URL</label>
                     <div className="flex gap-2">
                       <input
                         type="url"
@@ -3779,7 +3465,7 @@ export default function Dashboard() {
                         onChange={(e) => setEditWebhookUrl(e.target.value)}
                         placeholder="https://your-n8n.public_html/webhook/..."
                         required
-                        className="flex-1 bg-black/20 border border-white/10 rounded-xl py-2 px-3.5 text-xs text-white outline-none font-mono"
+                        className="flex-1 bg-white border border-[#096260]/15 rounded-xl py-2 px-3.5 text-xs text-[#082b36] outline-none font-mono"
                       />
                       <button
                         type="button"
@@ -3787,7 +3473,7 @@ export default function Dashboard() {
                           navigator.clipboard.writeText(editWebhookUrl);
                           alert("Webhook URL copied!");
                         }}
-                        className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white text-xs font-bold py-2 px-4 rounded-xl cursor-pointer"
+                        className="bg-[#096260] hover:bg-[#5fb4a9] text-white text-xs font-bold py-2 px-4 rounded-xl cursor-pointer"
                       >
                         Copy URL 📋
                       </button>
@@ -3798,8 +3484,8 @@ export default function Dashboard() {
                   {/* Gemini Prompt details */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <label className="block text-[10px] font-extrabold text-white uppercase tracking-widest font-mono">Consolidated Gemini GMB Email Filtering Instructions (Prompts)</label>
-                      <span className="text-[9px] bg-[#b026ff]/20 text-[#b026ff] px-2 py-0.5 rounded-full font-bold">SHARED ACROSS ALL 4 FAILOVER NODES</span>
+                      <label className="block text-[10px] font-extrabold text-[#082b36] uppercase tracking-widest font-mono">Consolidated Gemini GMB Email Filtering Instructions (Prompts)</label>
+                      <span className="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">SHARED ACROSS ALL 4 FAILOVER NODES</span>
                     </div>
                     <textarea
                       value={editGeminiPrompt}
@@ -3807,53 +3493,53 @@ export default function Dashboard() {
                       rows={5}
                       required
                       placeholder="Input customized contextual rules here..."
-                      className="w-full bg-black/20 border border-slate-250 focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-2xl py-3 px-4 text-xs font-normal leading-relaxed outline-none"
+                      className="w-full bg-slate-50 border border-slate-250 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-2xl py-3 px-4 text-xs font-normal leading-relaxed outline-none"
                     ></textarea>
                     <p className="text-[10px] text-gray-400">Instruct Gemini on your clients specific sector boundaries (e.g. Sydney Decking vs gambling spam emails) to identify spam/genuine with precision.</p>
                   </div>
 
                   {/* 4 Models failovers slots */}
                   <div className="space-y-4">
-                    <label className="block text-[10px] font-extrabold text-white uppercase tracking-widest font-mono">4-Stage Sequential Failover Core Nodes</label>
+                    <label className="block text-[10px] font-extrabold text-[#082b36] uppercase tracking-widest font-mono">4-Stage Sequential Failover Core Nodes</label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       
-                      <div className="bg-black/20 border border-white/10/60 p-3 rounded-2xl space-y-1.5">
+                      <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-2xl space-y-1.5">
                         <span className="block text-[9px] font-black text-blue-700 font-mono">🥈 NODE SLOT #1 (PRIMARY)</span>
                         <input
                           type="text"
                           value={editGeminiModel1}
                           onChange={(e) => setEditGeminiModel1(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-lg p-1 text-[11px] font-mono font-bold"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-1 text-[11px] font-mono font-bold"
                         />
                       </div>
 
-                      <div className="bg-black/20 border border-white/10/60 p-3 rounded-2xl space-y-1.5">
+                      <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-2xl space-y-1.5">
                         <span className="block text-[9px] font-black text-amber-700 font-mono">🥉 NODE SLOT #2 (BACKUP 1)</span>
                         <input
                           type="text"
                           value={editGeminiModel2}
                           onChange={(e) => setEditGeminiModel2(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-lg p-1 text-[11px] font-mono font-bold"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-1 text-[11px] font-mono font-bold"
                         />
                       </div>
 
-                      <div className="bg-black/20 border border-white/10/60 p-3 rounded-2xl space-y-1.5">
-                        <span className="block text-[9px] font-black text-emerald-400 font-mono">🏅 NODE SLOT #3 (BACKUP 2)</span>
+                      <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-2xl space-y-1.5">
+                        <span className="block text-[9px] font-black text-emerald-700 font-mono">🏅 NODE SLOT #3 (BACKUP 2)</span>
                         <input
                           type="text"
                           value={editGeminiModel3}
                           onChange={(e) => setEditGeminiModel3(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-lg p-1 text-[11px] font-mono font-bold"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-1 text-[11px] font-mono font-bold"
                         />
                       </div>
 
-                      <div className="bg-black/20 border border-white/10/60 p-3 rounded-2xl space-y-1.5">
-                        <span className="block text-[9px] font-black text-[#b026ff] font-mono">🎖️ NODE SLOT #4 (BACKUP 3)</span>
+                      <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-2xl space-y-1.5">
+                        <span className="block text-[9px] font-black text-purple-700 font-mono">🎖️ NODE SLOT #4 (BACKUP 3)</span>
                         <input
                           type="text"
                           value={editGeminiModel4}
                           onChange={(e) => setEditGeminiModel4(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-lg p-1 text-[11px] font-mono font-bold"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-1 text-[11px] font-mono font-bold"
                         />
                       </div>
 
@@ -3869,13 +3555,13 @@ export default function Dashboard() {
                           id="openai_toggle"
                           checked={editOpenaiEnabled}
                           onChange={(e) => setEditOpenaiEnabled(e.target.checked)}
-                          className="w-4 h-4 text-[#00ffff] focus:ring-[#096260] border-gray-300 rounded cursor-pointer"
+                          className="w-4 h-4 text-[#096260] focus:ring-[#096260] border-gray-300 rounded cursor-pointer"
                         />
-                        <label htmlFor="openai_toggle" className="text-[10px] font-extrabold text-white uppercase tracking-widest font-mono cursor-pointer">
+                        <label htmlFor="openai_toggle" className="text-[10px] font-extrabold text-[#082b36] uppercase tracking-widest font-mono cursor-pointer">
                           Activate Final Sentinel: OpenAI Fallback Node (gpt-4o)
                         </label>
                       </div>
-                      <span className="text-[9px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold">EMERGENCY FLOOD RESISTOR</span>
+                      <span className="text-[9px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">EMERGENCY FLOOD RESISTOR</span>
                     </div>
 
                     {editOpenaiEnabled && (
@@ -3886,7 +3572,7 @@ export default function Dashboard() {
                           rows={2}
                           required
                           placeholder="Emergency fallback instruction prompts..."
-                          className="w-full bg-red-500/5 border border-red-500/15 focus:border-red-500 rounded-2xl py-3 px-4 text-xs font-normal outline-none"
+                          className="w-full bg-red-50/20 border border-red-500/15 focus:border-red-500 rounded-2xl py-3 px-4 text-xs font-normal outline-none"
                         ></textarea>
                       </div>
                     )}
@@ -3895,27 +3581,27 @@ export default function Dashboard() {
                   {/* Recipients email addresses */}
                   <div className="border-t border-slate-100 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-extrabold text-white uppercase tracking-widest font-mono"> Genuine Target Email (Delivered Leads)</label>
+                      <label className="block text-[10px] font-extrabold text-[#082b36] uppercase tracking-widest font-mono"> Genuine Target Email (Delivered Leads)</label>
                       <input
                         type="email"
                         value={editGenuineRecipient}
                         onChange={(e) => setEditGenuineRecipient(e.target.value)}
                         placeholder="team@merchant.com.au"
                         required
-                        className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-[#082b36]"
                       />
                       <p className="text-[8px] text-gray-400">Filtered real customer inquiries will instantly dispatch to this address.</p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-extrabold text-white uppercase tracking-widest font-mono"> Spam Sandbox Email (Blocked Logs)</label>
+                      <label className="block text-[10px] font-extrabold text-[#082b36] uppercase tracking-widest font-mono"> Spam Sandbox Email (Blocked Logs)</label>
                       <input
                         type="email"
                         value={editSpamRecipient}
                         onChange={(e) => setEditSpamRecipient(e.target.value)}
                         placeholder="spam@agency.com"
                         required
-                        className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-[#082b36]"
                       />
                       <p className="text-[8px] text-gray-400">Commercial advertisements, slots and backlink pitches route safely here.</p>
                     </div>
@@ -3925,69 +3611,69 @@ export default function Dashboard() {
                   <div className="pt-4 border-t border-slate-100 text-right">
                     <button
                       type="submit"
-                      className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white font-extrabold text-xs py-3 px-6 rounded-xl hover:translate-y-[-1px] transition shadow-lg cursor-pointer"
+                      className="bg-[#096260] hover:bg-[#5fb4a9] text-white font-extrabold text-xs py-3 px-6 rounded-xl hover:translate-y-[-1px] transition shadow-lg cursor-pointer"
                     >
                       💾 Commit & Deploy Config to Live workflow
                     </button>
                   </div>
 
                 </form>
-              </PremiumTiltCard>
+              </div>
 
               {/* Right Column: Simulator & JSON Exporter (5 of 12 columns) */}
               <div className="lg:col-span-5 space-y-8 flex flex-col">
                 
                 {/* Simulator Card block */}
-                <PremiumTiltCard className=" rounded-3xl border  p-6 shadow-sm space-y-5">
+                <div className="bg-white rounded-3xl border border-[#096260]/10 p-6 shadow-sm space-y-5">
                   <div className="space-y-1">
                     <span className="inline-block bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">Sandbox Sandbox</span>
-                    <h3 className="text-base font-extrabold text-white">n8n Live Failover & SMTP Simulator</h3>
+                    <h3 className="text-base font-extrabold text-[#082b36]">n8n Live Failover & SMTP Simulator</h3>
                     <p className="text-xs text-gray-400">Simulate incoming lead submissions and test API gate reliability.</p>
                   </div>
 
                   {/* Simulated Failure checklist */}
-                  <div className="bg-transparent p-4 rounded-2xl border border-white/10 space-y-3">
-                    <h4 className="text-[10px] font-extrabold text-white uppercase tracking-wide font-mono">⚠️ Introduce Test API Outages (Simulate failures)</h4>
+                  <div className="bg-[#d5ecea]/20 p-4 rounded-2xl border border-[#096260]/5 space-y-3">
+                    <h4 className="text-[10px] font-extrabold text-[#082b36] uppercase tracking-wide font-mono">⚠️ Introduce Test API Outages (Simulate failures)</h4>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       
-                      <label className="flex items-center gap-2 cursor-pointer bg-black/20 p-2 border border-red-500/10 rounded-xl">
+                      <label className="flex items-center gap-2 cursor-pointer bg-white p-2 border border-red-500/10 rounded-xl">
                         <input
                           type="checkbox"
                           checked={n8nSimForceNodeFailures[1]}
                           onChange={(e) => setN8nSimForceNodeFailures({ ...n8nSimForceNodeFailures, 1: e.target.checked })}
                           className="w-3.5 h-3.5"
                         />
-                        <span className="text-[10px] select-none text-red-400 font-bold font-mono">Fail Slot #1</span>
+                        <span className="text-[10px] select-none text-red-950 font-bold font-mono">Fail Slot #1</span>
                       </label>
 
-                      <label className="flex items-center gap-2 cursor-pointer bg-black/20 p-2 border border-red-500/10 rounded-xl">
+                      <label className="flex items-center gap-2 cursor-pointer bg-white p-2 border border-red-500/10 rounded-xl">
                         <input
                           type="checkbox"
                           checked={n8nSimForceNodeFailures[2]}
                           onChange={(e) => setN8nSimForceNodeFailures({ ...n8nSimForceNodeFailures, 2: e.target.checked })}
                           className="w-3.5 h-3.5"
                         />
-                        <span className="text-[10px] select-none text-red-400 font-bold font-mono">Fail Slot #2</span>
+                        <span className="text-[10px] select-none text-red-950 font-bold font-mono">Fail Slot #2</span>
                       </label>
 
-                      <label className="flex items-center gap-2 cursor-pointer bg-black/20 p-2 border border-red-500/10 rounded-xl">
+                      <label className="flex items-center gap-2 cursor-pointer bg-white p-2 border border-red-500/10 rounded-xl">
                         <input
                           type="checkbox"
                           checked={n8nSimForceNodeFailures[3]}
                           onChange={(e) => setN8nSimForceNodeFailures({ ...n8nSimForceNodeFailures, 3: e.target.checked })}
                           className="w-3.5 h-3.5"
                         />
-                        <span className="text-[10px] select-none text-red-400 font-bold font-mono">Fail Slot #3</span>
+                        <span className="text-[10px] select-none text-red-950 font-bold font-mono">Fail Slot #3</span>
                       </label>
 
-                      <label className="flex items-center gap-2 cursor-pointer bg-black/20 p-2 border border-red-500/10 rounded-xl">
+                      <label className="flex items-center gap-2 cursor-pointer bg-white p-2 border border-red-500/10 rounded-xl">
                         <input
                           type="checkbox"
                           checked={n8nSimForceNodeFailures[4]}
                           onChange={(e) => setN8nSimForceNodeFailures({ ...n8nSimForceNodeFailures, 4: e.target.checked })}
                           className="w-3.5 h-3.5"
                         />
-                        <span className="text-[10px] select-none text-red-400 font-bold font-mono">Fail Slot #4</span>
+                        <span className="text-[10px] select-none text-red-950 font-bold font-mono">Fail Slot #4</span>
                       </label>
 
                     </div>
@@ -3997,31 +3683,31 @@ export default function Dashboard() {
                   <div className="space-y-3.5">
                     <div className="grid grid-cols-2 gap-3.5">
                       <div className="space-y-1">
-                        <span className="text-[9px] font-mono text-gray-300 font-bold uppercase tracking-wider">Form Name</span>
+                        <span className="text-[9px] font-mono text-gray-500 font-bold uppercase tracking-wider">Form Name</span>
                         <input
                           type="text"
                           value={n8nSimName}
                           onChange={(e) => setN8nSimName(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-xs font-semibold outline-none"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-semibold outline-none"
                         />
                       </div>
                       <div className="space-y-1">
-                        <span className="text-[9px] font-mono text-gray-300 font-bold uppercase tracking-wider">Form Email</span>
+                        <span className="text-[9px] font-mono text-gray-500 font-bold uppercase tracking-wider">Form Email</span>
                         <input
                           type="text"
                           value={n8nSimEmail}
                           onChange={(e) => setN8nSimEmail(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-xs font-semibold outline-none"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-semibold outline-none"
                         />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[9px] font-mono text-gray-300 font-bold uppercase tracking-wider">Form Message (Test prompt trigger sentences)</span>
+                      <span className="text-[9px] font-mono text-gray-500 font-bold uppercase tracking-wider">Form Message (Test prompt trigger sentences)</span>
                       <textarea
                         value={n8nSimMessage}
                         onChange={(e) => setN8nSimMessage(e.target.value)}
                         rows={3}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-xs leading-normal font-sans outline-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs leading-normal font-sans outline-none"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -4032,7 +3718,7 @@ export default function Dashboard() {
                           setN8nSimEmail("admin@crypto-casino-rich.net");
                           setN8nSimMessage("HEY there! Register with BTC wallet to claim 200 free card spins at slot-gambler.com! Guaranteed 50x payout rate. Standard Neteller and BTC payments supported. SEO optimization links inside...");
                         }}
-                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-black rounded-lg py-2 border border-red-500/30 cursor-pointer text-center"
+                        className="bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-black rounded-lg py-2 border border-red-200 cursor-pointer text-center"
                       >
                         ⚠️ Load Spam Inbound
                       </button>
@@ -4043,7 +3729,7 @@ export default function Dashboard() {
                           setN8nSimEmail("sarah.jenkins@outlook.com");
                           setN8nSimMessage("Hi Team, I'm hoping to get an price estimation for installing a premium wood patio deck at my home. The surface is about 24sqm. Do you have slots available to call me tomorrow?");
                         }}
-                        className="bg-green-500/10 hover:bg-green-500/20 text-green-400 text-[10px] font-black rounded-lg py-2 border border-green-500/30 cursor-pointer text-center"
+                        className="bg-green-50 hover:bg-green-100 text-green-700 text-[10px] font-black rounded-lg py-2 border border-green-200 cursor-pointer text-center"
                       >
                         🌟 Load Genuine Inbound
                       </button>
@@ -4062,8 +3748,8 @@ export default function Dashboard() {
 
                   {/* Console Logs visualization */}
                   {n8nSimConsoleLogs.length > 0 && (
-                    <div className="bg-transparent text-slate-300 font-mono text-[10px] p-4 rounded-2xl border border-white/5 shadow-inner h-64 overflow-y-auto space-y-1.5 scrollbar-thin">
-                      <div className="flex justify-between items-center text-[#00ffff] border-b border-white/5 pb-2 mb-2">
+                    <div className="bg-[#041a1f] text-slate-300 font-mono text-[10px] p-4 rounded-2xl border border-[#5fb4a9]/20 shadow-inner h-64 overflow-y-auto space-y-1.5 scrollbar-thin">
+                      <div className="flex justify-between items-center text-[#5fb4a9] border-b border-white/5 pb-2 mb-2">
                         <span>🛰️ VIRTUAL n8n SANDBOX DIALER</span>
                         <button onClick={() => setN8nSimConsoleLogs([])} className="hover:underline hover:text-white font-bold">Clear Terminal ✖</button>
                       </div>
@@ -4083,16 +3769,16 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                </PremiumTiltCard>
+                </div>
 
                 {/* JSON Blueprint Card */}
-                <div className="bg-transparent text-white rounded-3xl p-6 shadow-xl border border-white/5 space-y-4">
+                <div className="bg-[#082b36] text-white rounded-3xl p-6 shadow-xl border border-white/5 space-y-4">
                   <div>
-                    <h3 className="text-sm font-extrabold text-[#00ffff]">n8n JSON Workflow Node Blueprint</h3>
-                    <p className="text-[10px] text-[#00ffff]/70 mt-1">Copy and paste this config directly to import fully automated pipelines in n8n</p>
+                    <h3 className="text-sm font-extrabold text-[#5fb4a9]">n8n JSON Workflow Node Blueprint</h3>
+                    <p className="text-[10px] text-[#5fb4a9]/70 mt-1">Copy and paste this config directly to import fully automated pipelines in n8n</p>
                   </div>
 
-                  <div className="bg-[#031519] border border-white/5 rounded-2xl overflow-hidden relative">
+                  <div className="bg-[#031519] border border-[#5fb4a9]/15 rounded-2xl overflow-hidden relative">
                     <pre className="text-[9px] font-mono p-4 text-slate-300 overflow-x-auto max-h-60 leading-relaxed select-all">
 {JSON.stringify({
   "name": `LeadShield_Auto_${selConfigClientId}`,
@@ -4272,7 +3958,7 @@ export default function Dashboard() {
                         navigator.clipboard.writeText(jsonTxt);
                         alert("n8n Workflow JSON blueprint copied successfully! Paste this configuration directly inside your n8n workspace with Ctrl+V.");
                       }}
-                      className="absolute bottom-3 right-3 bg-[#5fb4a9]/10 border border-white/5 hover:bg-[#5fb4a9]/20 text-[#00ffff] text-[9px] uppercase tracking-wider font-extrabold py-2 px-3.5 rounded-xl cursor-pointer select-none transition"
+                      className="absolute bottom-3 right-3 bg-[#5fb4a9]/10 border border-[#5fb4a9]/20 hover:bg-[#5fb4a9]/20 text-[#5fb4a9] text-[9px] uppercase tracking-wider font-extrabold py-2 px-3.5 rounded-xl cursor-pointer select-none transition"
                     >
                       Copy Node JSON 📋
                     </button>
@@ -4295,29 +3981,29 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             {/* Left selector panel */}
-            <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm space-y-5">
+            <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm space-y-5">
               <div className="space-y-1.5">
-                <span className="inline-block bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">n8n Workflow Hub</span>
-                <h2 className="text-base font-extrabold text-white">Simulated Webhook Reception Payload Channel</h2>
-                <p className="text-xs text-white/65 leading-relaxed">
+                <span className="inline-block bg-[#096260] text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">n8n Workflow Hub</span>
+                <h2 className="text-base font-extrabold text-[#082b36]">Simulated Webhook Reception Payload Channel</h2>
+                <p className="text-xs text-[#082b36]/65 leading-relaxed">
                   Select a Lead Blueprint packet below. This simulates sending raw JSON into `/api/receive-lead.php` from your external scraper flow.
                 </p>
               </div>
 
               {/* Blueprint select box */}
               <div className="space-y-2">
-                <label className="block text-[10px] font-extrabold text-gray-300 uppercase tracking-widest font-mono">Select Lead Blueprint Packet Preset</label>
+                <label className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-widest font-mono">Select Lead Blueprint Packet Preset</label>
                 <div className="grid grid-cols-2 gap-3">
                   {TEST_WEBHOOKS.map((tw, i) => (
                     <button
                       key={tw.name}
                       onClick={() => handleWebhookPresetChange(i)}
-                      className={`p-4 rounded-2xl border text-left transition duration-200 flex flex-col justify-between h-24 text-xs cursor-pointer shadow-sm ${selectedWebhook === i ? 'bg-transparent border-white/10 text-[#00ffff] font-bold ring-1 ring-[#096260]' : 'bg-transparent border-gray-100 hover:bg-transparent text-white'}`}
+                      className={`p-4 rounded-2xl border text-left transition duration-200 flex flex-col justify-between h-24 text-xs cursor-pointer shadow-sm ${selectedWebhook === i ? 'bg-[#d5ecea] border-[#096260] text-[#096260] font-bold ring-1 ring-[#096260]' : 'bg-[#d5ecea]/10 border-gray-100 hover:bg-[#d5ecea]/25 text-[#082b36]'}`}
                     >
                       <p className="font-bold truncate w-full">{tw.name.split(':')[0]}</p>
                       <div className="flex justify-between items-center w-full mt-2">
-                        <span className="text-[9px] font-mono tracking-wider bg-white/75 px-2 py-0.5 rounded-lg shadow-xs text-gray-300 uppercase font-extrabold">{tw.client_id}</span>
-                        <span className={`text-[8px] font-mono px-2 py-0.5 rounded-full font-bold uppercase border ${tw.status === 'GENUINE' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white border-white/5' : 'bg-orange-500/10 text-orange-600 border-orange-500/10'}`}>
+                        <span className="text-[9px] font-mono tracking-wider bg-white/75 px-2 py-0.5 rounded-lg shadow-xs text-gray-500 uppercase font-extrabold">{tw.client_id}</span>
+                        <span className={`text-[8px] font-mono px-2 py-0.5 rounded-full font-bold uppercase border ${tw.status === 'GENUINE' ? 'bg-[#096260] text-white border-[#5fb4a9]/30' : 'bg-orange-500/10 text-orange-600 border-orange-500/10'}`}>
                           {tw.status}
                         </span>
                       </div>
@@ -4327,29 +4013,29 @@ export default function Dashboard() {
               </div>
 
               {/* Form Input fields showing dynamic raw values */}
-              <div className="bg-transparent p-5 rounded-2xl border border-white/10 space-y-4">
+              <div className="bg-[#d5ecea]/15 p-5 rounded-2xl border border-[#096260]/10 space-y-4">
                 <div className="flex justify-between items-center">
-                  <p className="text-[10px] font-bold uppercase text-[#00ffff] font-mono tracking-wider">Dynamic Form payload body</p>
+                  <p className="text-[10px] font-bold uppercase text-[#096260] font-mono tracking-wider">Dynamic Form payload body</p>
                   <span className="text-[9px] font-mono text-gray-400 font-extrabold bg-white/60 px-2 py-0.5 rounded-md">POST RAW JSON</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[9px] text-[#00ffff] uppercase font-bold tracking-wider mb-1 font-mono">Target Client ID Key</label>
+                    <label className="block text-[9px] text-[#096260] uppercase font-bold tracking-wider mb-1 font-mono">Target Client ID Key</label>
                     <input 
                       type="text" 
                       value={webhookData.client_id}
                       onChange={(e) => setWebhookData({ ...webhookData, client_id: e.target.value })}
-                      className="w-full bg-black/20 border border-white/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-white/10 focus:ring-1 focus:ring-[#096260] font-mono text-white"
+                      className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-[#096260] focus:ring-1 focus:ring-[#096260] font-mono text-[#082b36]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[9px] text-[#00ffff] uppercase font-bold tracking-wider mb-1 font-mono">Class Verdict (from AI Filter Node)</label>
+                    <label className="block text-[9px] text-[#096260] uppercase font-bold tracking-wider mb-1 font-mono">Class Verdict (from AI Filter Node)</label>
                     <select
                       value={webhookData.status}
                       onChange={(e) => setWebhookData({ ...webhookData, status: e.target.value })}
-                      className="w-full bg-black/20 border border-white/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-white/10 font-bold text-white"
+                      className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-[#096260] font-bold text-[#082b36]"
                     >
                       <option value="GENUINE">GENUINE</option>
                       <option value="SPAM">SPAM</option>
@@ -4358,11 +4044,11 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-[9px] text-[#00ffff]/85 uppercase font-bold tracking-wider mb-1 font-mono">Source Marketing Channel</label>
+                  <label className="block text-[9px] text-[#096260]/85 uppercase font-bold tracking-wider mb-1 font-mono">Source Marketing Channel</label>
                   <select
                     value={webhookData.channel || 'website'}
                     onChange={(e) => setWebhookData({ ...webhookData, channel: e.target.value })}
-                    className="w-full bg-black/20 border border-white/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-white/10 font-extrabold text-white"
+                    className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-[#096260] font-extrabold text-[#082b36]"
                   >
                     <option value="website">🌐 Website Lead Form (SEO)</option>
                     <option value="google_ads">🎯 Google AdWords (CPC Campaign)</option>
@@ -4373,18 +4059,18 @@ export default function Dashboard() {
 
                 {webhookData.status === 'SPAM' && (
                   <div>
-                    <label className="block text-[9px] text-red-400 uppercase font-bold tracking-wider mb-1 font-mono">AI Gating Trigger Filter Reason</label>
+                    <label className="block text-[9px] text-red-700 uppercase font-bold tracking-wider mb-1 font-mono">AI Gating Trigger Filter Reason</label>
                     <input 
                       type="text" 
                       value={webhookData.ai_reason}
                       onChange={(e) => setWebhookData({ ...webhookData, ai_reason: e.target.value })}
-                      className="w-full bg-black/20 border border-red-500/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-red-500 text-red-400 font-medium"
+                      className="w-full bg-white border border-red-500/10 text-xs rounded-xl py-2 px-3 focus:outline-none focus:border-red-500 text-red-950 font-medium"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[9px] text-[#00ffff] uppercase font-bold tracking-wider mb-1 font-mono font-mono">Dynamic Form Fields Payload (JSON representation)</label>
+                  <label className="block text-[9px] text-[#096260] uppercase font-bold tracking-wider mb-1 font-mono font-mono">Dynamic Form Fields Payload (JSON representation)</label>
                   <textarea
                     rows={4}
                     value={JSON.stringify(webhookData.form_data, null, 2)}
@@ -4394,36 +4080,36 @@ export default function Dashboard() {
                         setWebhookData({ ...webhookData, form_data: parsed });
                       } catch (err) {}
                     }}
-                    className="w-full bg-black/20 text-xs border border-white/10 focus:outline-none focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-xl p-3 font-mono text-white selection:bg-[#5fb4a9]"
+                    className="w-full bg-white text-xs border border-[#096260]/10 focus:outline-none focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl p-3 font-mono text-[#082b36] selection:bg-[#5fb4a9]"
                   ></textarea>
                 </div>
 
                 <button 
                   onClick={handleBroadcastSimulatedWebhook}
-                  className={`w-full text-white font-extrabold text-white font-extrabold text-xs py-3 px-4 rounded-xl shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer ${webhookSuccessSignal ? 'bg-green-600 shadow-green-600/20' : 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] shadow-[#096260]/20 text-white'}`}
+                  className={`w-full text-white font-extrabold text-[#082b36] font-extrabold text-xs py-3 px-4 rounded-xl shadow-lg transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer ${webhookSuccessSignal ? 'bg-green-600 shadow-green-600/20' : 'bg-[#096260] hover:bg-[#5fb4a9] shadow-[#096260]/20 text-white'}`}
                 >
                   <Send size={14} className={webhookSuccessSignal ? 'animate-ping' : ''} />
                   <span>Broadcast Webhook REST Payload</span>
                 </button>
               </div>
 
-            </PremiumTiltCard>
+            </div>
 
             {/* Simulated Server Console output screen */}
-            <div className="bg-transparent p-6 rounded-3xl border border-white/5 shadow-2xl flex flex-col justify-between text-white font-mono space-y-4">
+            <div className="bg-[#082b36] p-6 rounded-3xl border border-white/5 shadow-2xl flex flex-col justify-between text-white font-mono space-y-4">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 bg-[#5fb4a9] rounded-full animate-pulse"></div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#00ffff]">RECEPTOR CONSOLE WEBHOOK LISTENER</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#5fb4a9]">RECEPTOR CONSOLE WEBHOOK LISTENER</h3>
                 </div>
                 <p className="text-[10px] text-gray-400">Monitoring POST inputs targeting address: <span className="text-white">https://your-cpanel-domain.com/lead-shield/api/receive-lead.php</span></p>
               </div>
 
               {/* Live Logger panel */}
-              <div className="flex-1 bg-black/30 border border-white/5 rounded-2xl p-5 overflow-y-auto max-h-[400px] text-[11px] leading-relaxed space-y-3.5 selection:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 scrollbar">
+              <div className="flex-1 bg-black/30 border border-white/5 rounded-2xl p-5 overflow-y-auto max-h-[400px] text-[11px] leading-relaxed space-y-3.5 selection:bg-[#096260]/95 scrollbar">
                 
                 {webhookConsoleLogs.length === 0 ? (
-                  <p className="text-gray-300 italic select-none">
+                  <p className="text-gray-500 italic select-none">
                     [System idle] Webhook listener is actively listening for incoming payloads. Select a preset and broadcast to observe server response code logs...
                   </p>
                 ) : (
@@ -4436,11 +4122,11 @@ export default function Dashboard() {
                 
               </div>
 
-              <div className="flex justify-between items-center text-[9px] text-gray-300 border-t border-white/5 pt-4">
+              <div className="flex justify-between items-center text-[9px] text-gray-500 border-t border-white/5 pt-4">
                 <span className="uppercase font-bold text-gray-400 tracking-wider">⚡ NODE RECEPTOR BRIDGE SIM</span>
                 <button 
                   onClick={() => setWebhookConsoleLogs([])}
-                  className="text-[#00ffff] hover:underline font-bold"
+                  className="text-[#5fb4a9] hover:underline font-bold"
                 >
                   Clear stream logs
                 </button>
@@ -4451,36 +4137,36 @@ export default function Dashboard() {
           </div>
 
           {/* Real External Terminal Testing Panel */}
-          <PremiumTiltCard className=" p-6 md:p-8 rounded-3xl border  shadow-sm space-y-6 mt-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#096260]/10 shadow-sm space-y-6 mt-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#096260]/10 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">Real External API</span>
+                  <span className="bg-[#096260]/10 text-[#096260] text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">Real External API</span>
                   <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">Active Receiver</span>
                 </div>
-                <h3 className="text-base font-extrabold text-white">⚡ Local Terminal Testing & PowerShell Fix Toolkit</h3>
-                <p className="text-xs text-gray-300">
-                  Windows PowerShell does not support Linux-style <code className="bg-black/20 px-1 rounded text-red-400 font-mono">-X</code> curl parameters. Use <span className="font-bold text-[#00ffff]">Invoke-RestMethod</span> instead for a flawless, native test:
+                <h3 className="text-base font-extrabold text-[#082b36]">⚡ Local Terminal Testing & PowerShell Fix Toolkit</h3>
+                <p className="text-xs text-gray-500">
+                  Windows PowerShell does not support Linux-style <code className="bg-slate-100 px-1 rounded text-red-600 font-mono">-X</code> curl parameters. Use <span className="font-bold text-[#096260]">Invoke-RestMethod</span> instead for a flawless, native test:
                 </p>
               </div>
 
               {/* Tab Switcher for different shells */}
-              <div className="flex items-center gap-1.5 bg-black/20 p-1 rounded-xl shadow-inner shrink-0">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl shadow-inner shrink-0">
                 <button
                   onClick={() => setActiveTestCmd('powershell')}
-                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer ${activeTestCmd === 'powershell' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-xs' : 'text-gray-300 hover:bg-white/10'}`}
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer ${activeTestCmd === 'powershell' ? 'bg-[#096260] text-white shadow-xs' : 'text-gray-500 hover:bg-white/55'}`}
                 >
                   Windows PowerShell 💻
                 </button>
                 <button
                   onClick={() => setActiveTestCmd('cmd')}
-                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer ${activeTestCmd === 'cmd' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-xs' : 'text-gray-300 hover:bg-white/10'}`}
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer ${activeTestCmd === 'cmd' ? 'bg-[#096260] text-white shadow-xs' : 'text-gray-500 hover:bg-white/55'}`}
                 >
                   Windows CMD 🛡️
                 </button>
                 <button
                   onClick={() => setActiveTestCmd('bash')}
-                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer ${activeTestCmd === 'bash' ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white shadow-xs' : 'text-gray-300 hover:bg-white/10'}`}
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer ${activeTestCmd === 'bash' ? 'bg-[#096260] text-white shadow-xs' : 'text-gray-500 hover:bg-white/55'}`}
                 >
                   macOS/Linux Bash 🍎
                 </button>
@@ -4488,8 +4174,8 @@ export default function Dashboard() {
             </div>
 
             {/* Rendering selected command block */}
-            <div className="relative bg-transparent border border-white/5 rounded-2xl p-5 select-text">
-              <span className="absolute top-3.5 right-14 text-[9px] font-mono text-[#00ffff] bg-[#5fb4a9]/10 border border-white/5 px-2 py-0.5 rounded-md font-bold uppercase select-none">
+            <div className="relative bg-[#041a1f] border border-[#5fb4a9]/25 rounded-2xl p-5 select-text">
+              <span className="absolute top-3.5 right-14 text-[9px] font-mono text-[#5fb4a9] bg-[#5fb4a9]/10 border border-[#5fb4a9]/20 px-2 py-0.5 rounded-md font-bold uppercase select-none">
                 {activeTestCmd === 'powershell' ? 'PowerShell - Native' : activeTestCmd === 'cmd' ? 'CMD - Curl.exe' : 'Bash - curl'}
               </span>
               
@@ -4525,7 +4211,7 @@ Invoke-RestMethod -Method Post -Uri "${liveHost}/api/receive-lead" -ContentType 
                   navigator.clipboard.writeText(cmdText);
                   alert(`Copied the test snippet for ${activeTestCmd}! Paste and press Enter in your PC's terminal to send a live lead directly!`);
                 }}
-                className="absolute top-2.5 right-3 bg-white/10 hover:bg-white/20 text-[#00ffff] font-bold text-[10px] uppercase py-1.5 px-3 rounded-lg border border-white/15 transition cursor-pointer select-none"
+                className="absolute top-2.5 right-3 bg-white/10 hover:bg-white/20 text-[#5fb4a9] font-bold text-[10px] uppercase py-1.5 px-3 rounded-lg border border-white/15 transition cursor-pointer select-none"
               >
                 Copy Code 📋
               </button>
@@ -4560,70 +4246,70 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
             </div>
 
             {/* Instructions text block helpful summary */}
-            <div className="bg-transparent p-4 border border-white/10 rounded-2xl text-xs text-white space-y-2 leading-relaxed">
-              <span className="font-bold text-[#00ffff] uppercase font-mono text-[10px] block">💡 Real-time Synchronized Webhook Integration</span>
+            <div className="bg-[#d5ecea]/20 p-4 border border-[#096260]/10 rounded-2xl text-xs text-[#082b36] space-y-2 leading-relaxed">
+              <span className="font-bold text-[#096260] uppercase font-mono text-[10px] block">💡 Real-time Synchronized Webhook Integration</span>
               <p>
-                Copy the snippet above and paste it directly on your Windows PC or Mac terminal. The Express server backend catches the POST parameters, evaluates them instantly (using Gemini's AI model if configured or smart regional logic parameters), registers them in our central <code className="bg-transparent text-[#00ffff] font-mono px-1 rounded">db.json</code>, and automatically broadcasts it to this app dashboard via active client state polling!
+                Copy the snippet above and paste it directly on your Windows PC or Mac terminal. The Express server backend catches the POST parameters, evaluates them instantly (using Gemini's AI model if configured or smart regional logic parameters), registers them in our central <code className="bg-[#d5ecea] text-[#096260] font-mono px-1 rounded">db.json</code>, and automatically broadcasts it to this app dashboard via active client state polling!
               </p>
-              <div className="flex gap-2.5 items-center pt-2 text-[#00ffff] border-t border-white/10 mt-1">
+              <div className="flex gap-2.5 items-center pt-2 text-[#096260] border-t border-[#096260]/10 mt-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <p className="font-semibold text-[11px]">Any external client can now post leads to: <span className="font-mono bg-black/20 px-2 py-0.5 rounded border border-white/10 text-[10.5px] font-bold select-all">{window.location.origin}/api/receive-lead</span></p>
+                <p className="font-semibold text-[11px]">Any external client can now post leads to: <span className="font-mono bg-white px-2 py-0.5 rounded border border-[#096260]/20 text-[10.5px] font-bold select-all">{window.location.origin}/api/receive-lead</span></p>
               </div>
             </div>
-          </PremiumTiltCard>
+          </div>
 
           {/* New Interactive n8n Live Workflow Guide */}
-          <PremiumTiltCard className=" p-6 md:p-8 rounded-3xl border  shadow-sm space-y-6">
-            <div className="border-b border-white/10 pb-4">
-              <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">n8n PRODUCTION SYSTEM INTEGRATION</span>
-              <h3 className="text-base font-extrabold text-white mt-1">🔌 Connect Your Live n8n Workflows Directly</h3>
-              <p className="text-xs text-gray-300 mt-1">
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#096260]/10 shadow-sm space-y-6">
+            <div className="border-b border-[#096260]/10 pb-4">
+              <span className="bg-[#096260]/10 text-[#096260] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">n8n PRODUCTION SYSTEM INTEGRATION</span>
+              <h3 className="text-base font-extrabold text-[#082b36] mt-1">🔌 Connect Your Live n8n Workflows Directly</h3>
+              <p className="text-xs text-gray-500 mt-1">
                 Route filtered, post-processed, and classified leads directly from your personal n8n instance to this central dashboard. No double filter of AI will run – we trust your n8n verdict and display it neatly for your clients.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-gray-300">
-              <div className="space-y-2 border-r border-white/10 pr-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-gray-600">
+              <div className="space-y-2 border-r border-[#096260]/5 pr-4">
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white w-5 h-5 flex items-center justify-center rounded-full font-black text-[10px]">1</span>
-                  <h4 className="font-extrabold text-white">n8n HTTP Node</h4>
+                  <span className="bg-[#096260] text-white w-5 h-5 flex items-center justify-center rounded-full font-black text-[10px]">1</span>
+                  <h4 className="font-extrabold text-[#082b36]">n8n HTTP Node</h4>
                 </div>
-                <p className="leading-relaxed text-gray-300 text-[11px]">
+                <p className="leading-relaxed text-gray-500 text-[11px]">
                   Add an <strong>HTTP Request</strong> node in your n8n workflow at the very end of your lead intake sequence.
                 </p>
-                <div className="bg-black/20 p-3 rounded-xl border border-dashed border-white/10 mt-2 space-y-1 font-mono text-[10px]">
-                  <div><strong className="text-gray-300">Method:</strong> <span className="text-emerald-400 font-bold">POST</span></div>
-                  <div><strong className="text-gray-300">URL:</strong> <span className="text-[#00ffff] select-all break-all font-bold">{window.location.origin}/api/receive-lead</span></div>
-                  <div><strong className="text-gray-300">Headers:</strong> <span className="text-gray-300">Content-Type: application/json</span></div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-dashed border-gray-200 mt-2 space-y-1 font-mono text-[10px]">
+                  <div><strong className="text-gray-700">Method:</strong> <span className="text-emerald-700 font-bold">POST</span></div>
+                  <div><strong className="text-gray-700">URL:</strong> <span className="text-[#096260] select-all break-all font-bold">{window.location.origin}/api/receive-lead</span></div>
+                  <div><strong className="text-gray-700">Headers:</strong> <span className="text-gray-500">Content-Type: application/json</span></div>
                 </div>
               </div>
 
-              <div className="space-y-2 border-r border-white/10 pr-4">
+              <div className="space-y-2 border-r border-[#096260]/5 pr-4">
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white w-5 h-5 flex items-center justify-center rounded-full font-black text-[10px]">2</span>
-                  <h4 className="font-extrabold text-white">Configure custom Payload Map</h4>
+                  <span className="bg-[#096260] text-white w-5 h-5 flex items-center justify-center rounded-full font-black text-[10px]">2</span>
+                  <h4 className="font-extrabold text-[#082b36]">Configure custom Payload Map</h4>
                 </div>
-                <p className="leading-relaxed text-gray-300 text-[11px]">
-                  Transmit the lead parameters mapped dynamically from previous nodes. Set the classified <code className="bg-black/20 p-0.5 rounded font-mono text-[9px]">status</code> to <strong>GENUINE</strong> or <strong>SPAM</strong>.
+                <p className="leading-relaxed text-gray-500 text-[11px]">
+                  Transmit the lead parameters mapped dynamically from previous nodes. Set the classified <code className="bg-slate-100 p-0.5 rounded font-mono text-[9px]">status</code> to <strong>GENUINE</strong> or <strong>SPAM</strong>.
                 </p>
-                <div className="bg-black/20 p-2.5 rounded-xl border border-dashed border-white/10 mt-2 text-[10px] space-y-1">
-                  <p className="font-semibold text-gray-300 font-mono">Parameters structure:</p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-300 font-mono text-[9px] pl-1">
-                    <li><span className="text-emerald-400 font-bold">"client_id"</span>: Client matching key (e.g., <code className="bg-black/20 px-1">sydney_decking</code>)</li>
-                    <li><span className="text-emerald-400 font-bold">"status"</span>: <code className="text-white font-bold">"GENUINE"</code> or <code className="text-white font-bold">"SPAM"</code></li>
-                    <li><span className="text-emerald-400 font-bold">"reason"</span>: Detailed tag / spam reason</li>
-                    <li><span className="text-emerald-400 font-bold">"name"</span>: Lead's contact sender name</li>
-                    <li><span className="text-emerald-400 font-bold">"email"</span>: Active sender email address</li>
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-dashed border-gray-200 mt-2 text-[10px] space-y-1">
+                  <p className="font-semibold text-gray-700 font-mono">Parameters structure:</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-500 font-mono text-[9px] pl-1">
+                    <li><span className="text-emerald-700 font-bold">"client_id"</span>: Client matching key (e.g., <code className="bg-white px-1">sydney_decking</code>)</li>
+                    <li><span className="text-emerald-700 font-bold">"status"</span>: <code className="text-gray-800 font-bold">"GENUINE"</code> or <code className="text-gray-800 font-bold">"SPAM"</code></li>
+                    <li><span className="text-emerald-700 font-bold">"reason"</span>: Detailed tag / spam reason</li>
+                    <li><span className="text-emerald-700 font-bold">"name"</span>: Lead's contact sender name</li>
+                    <li><span className="text-emerald-700 font-bold">"email"</span>: Active sender email address</li>
                   </ul>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white w-5 h-5 flex items-center justify-center rounded-full font-black text-[10px]">3</span>
-                  <h4 className="font-extrabold text-white">Immediate Overrides Panel</h4>
+                  <span className="bg-[#096260] text-white w-5 h-5 flex items-center justify-center rounded-full font-black text-[10px]">3</span>
+                  <h4 className="font-extrabold text-[#082b36]">Immediate Overrides Panel</h4>
                 </div>
-                <p className="leading-relaxed text-gray-300 text-[11px]">
+                <p className="leading-relaxed text-gray-500 text-[11px]">
                   When selling solutions to clients, they access a curated dashboard. If n8n mistakenly flags a query, your client can bypass it by clicking <strong>✅ Mark GENUINE</strong> or <strong>⚠️ Mark SPAM</strong> on their terminal view instantly.
                 </p>
                 <div className="border border-emerald-500/20 bg-emerald-50/45 p-3 rounded-xl mt-2">
@@ -4631,16 +4317,16 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                     Ready for client white-labeling
                   </p>
-                  <p className="text-[10px] text-gray-300 leading-normal mt-1">
+                  <p className="text-[10px] text-gray-500 leading-normal mt-1">
                     The status transitions are synchronized seamlessly, giving your end-clients maximum control while utilizing n8n automated notifications.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-transparent p-5 rounded-2xl border border-white/5 space-y-3 relative select-text mt-4">
+            <div className="bg-[#041a1f] p-5 rounded-2xl border border-[#5fb4a9]/25 space-y-3 relative select-text mt-4">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-mono font-bold text-[#00ffff] tracking-wider uppercase">JSON Payload to Paste into n8n Webhook / HTTP Request parameters</span>
+                <span className="text-[10px] font-mono font-bold text-[#5fb4a9] tracking-wider uppercase">JSON Payload to Paste into n8n Webhook / HTTP Request parameters</span>
                 <button
                   onClick={() => {
                     const sampleN8nPayload = `{
@@ -4656,7 +4342,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                     navigator.clipboard.writeText(sampleN8nPayload);
                     alert("n8n standard JSON blueprint payload template copied successfully! Paste this inside your HTTP Request node dynamic JSON parameter setup.");
                   }}
-                  className="bg-white/10 hover:bg-white/20 text-[#00ffff] font-bold text-[9px] uppercase py-1 px-2.5 rounded border border-white/10 transition cursor-pointer"
+                  className="bg-white/10 hover:bg-white/20 text-[#5fb4a9] font-bold text-[9px] uppercase py-1 px-2.5 rounded border border-white/10 transition cursor-pointer"
                 >
                   Copy JSON Payload 📋
                 </button>
@@ -4674,17 +4360,17 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
 }`}
               </pre>
             </div>
-          </PremiumTiltCard>
+          </div>
 
           {/* SECURE LEAD STATS RETRIEVAL API (BI-LINGUAL DOCUMENTATION & LIVE PLAYGROUND) */}
-          <PremiumTiltCard className=" p-6 md:p-8 rounded-3xl border  shadow-sm space-y-6">
-            <div className="border-b border-white/10 pb-4">
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#096260]/10 shadow-sm space-y-6">
+            <div className="border-b border-[#096260]/10 pb-4">
               <div className="flex items-center gap-1.5">
-                <span className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">SECURE GET ENDPOINT</span>
+                <span className="bg-[#096260]/10 text-[#096260] text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">SECURE GET ENDPOINT</span>
                 <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">LIVE INTELLIGENCE FEED</span>
               </div>
-              <h3 className="text-base font-extrabold text-white mt-1">📊 Leads Stats & Audit Feed API Query Channel</h3>
-              <p className="text-xs text-gray-300 mt-1">
+              <h3 className="text-base font-extrabold text-[#082b36] mt-1">📊 Leads Stats & Audit Feed API Query Channel</h3>
+              <p className="text-xs text-gray-500 mt-1">
                 Easily fetch genuine and spam lead metrics into any external website or app using this API. Includes support for date range and client ID filters.
               </p>
             </div>
@@ -4692,16 +4378,16 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
             {/* Core parameters controller and generator */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Selector form */}
-              <div className="space-y-4 bg-transparent p-5 rounded-2xl border border-white/10">
-                <h4 className="text-xs font-bold text-[#00ffff] uppercase font-mono tracking-wider">🛠️ Dynamic API Query Builder</h4>
+              <div className="space-y-4 bg-[#d5ecea]/10 p-5 rounded-2xl border border-[#096260]/10">
+                <h4 className="text-xs font-bold text-[#096260] uppercase font-mono tracking-wider">🛠️ Dynamic API Query Builder</h4>
                 
                 {/* 1. Client selection */}
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-300 uppercase font-mono">Client ID Filter</label>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase font-mono">Client ID Filter</label>
                   <select
                     value={statsClientId}
                     onChange={(e) => setStatsClientId(e.target.value)}
-                    className="w-full bg-black/20 border border-white/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-semibold text-white"
+                    className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-semibold text-[#082b36]"
                   >
                     <option value="all">🌐 All Clients combined</option>
                     {clients.map(c => (
@@ -4713,39 +4399,39 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                 {/* 2. Start Date and End Date */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-300 uppercase font-mono">Start Date (YYYY-MM-DD)</label>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase font-mono">Start Date (YYYY-MM-DD)</label>
                     <input
                       type="date"
                       value={statsStartDate}
                       onChange={(e) => setStatsStartDate(e.target.value)}
-                      className="w-full bg-black/20 border border-white/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-mono text-white"
+                      className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-mono text-[#082b36]"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-300 uppercase font-mono">End Date (YYYY-MM-DD)</label>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase font-mono">End Date (YYYY-MM-DD)</label>
                     <input
                       type="date"
                       value={statsEndDate}
                       onChange={(e) => setStatsEndDate(e.target.value)}
-                      className="w-full bg-black/20 border border-white/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-mono text-white"
+                      className="w-full bg-white border border-[#096260]/10 text-xs rounded-xl py-2 px-3 focus:outline-none font-mono text-[#082b36]"
                     />
                   </div>
                 </div>
 
                 {/* Secure Preset API key highlight */}
-                <div className="space-y-1 bg-black/20 p-3 rounded-xl border border-white/10">
+                <div className="space-y-1 bg-white p-3 rounded-xl border border-[#096260]/10">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-bold text-[#00ffff] uppercase font-mono">🔑 Active Endpoint Secret Key</span>
+                    <span className="text-[9px] font-bold text-[#096260] uppercase font-mono">🔑 Active Endpoint Secret Key</span>
                     <span className="text-[8px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-bold">DEFAULT ACTIVE</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-1">
-                    <code className="text-[10.5px] font-mono text-white font-bold select-all bg-black/20 px-2 py-1 rounded border border-gray-100 w-full break-all">shield_lead_key_2026_secure</code>
+                    <code className="text-[10.5px] font-mono text-[#082b36] font-bold select-all bg-slate-50 px-2 py-1 rounded border border-gray-100 w-full break-all">shield_lead_key_2026_secure</code>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText("shield_lead_key_2026_secure");
                         alert("API Key copied! Use this in headers ('X-API-Key') or in query parameters ('?api_key=...')");
                       }}
-                      className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white font-bold text-[9px] uppercase px-2 py-1 rounded shrink-0 cursor-pointer"
+                      className="bg-[#096260] hover:bg-[#5fb4a9] text-white font-bold text-[9px] uppercase px-2 py-1 rounded shrink-0 cursor-pointer"
                     >
                       Copy
                     </button>
@@ -4780,7 +4466,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                       }
                     }}
                     disabled={statsLoading}
-                    className="w-full bg-transparent hover:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white font-extrabold text-xs py-2.5 px-4 rounded-xl shadow transition duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full bg-[#082b36] hover:bg-[#096260] text-white font-extrabold text-xs py-2.5 px-4 rounded-xl shadow transition duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     <span>{statsLoading ? '⌛ Fetching stats feed...' : '🔍 Execute Live API Test'}</span>
                   </button>
@@ -4790,7 +4476,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
               {/* Endpoint path and parameters documentation block */}
               <div className="space-y-4">
                 <div className="bg-[#042831] p-4 rounded-2xl text-white font-mono text-[11px] leading-relaxed space-y-3">
-                  <span className="text-[#00ffff] text-[9px] uppercase font-bold tracking-widest block font-mono font-bold">📡 API SPECIFICATION DEFINITION</span>
+                  <span className="text-[#5fb4a9] text-[9px] uppercase font-bold tracking-widest block font-mono font-bold">📡 API SPECIFICATION DEFINITION</span>
                   
                   <div className="border-b border-white/5 pb-2">
                     <span className="text-emerald-400 font-extrabold mr-2 uppercase">GET</span>
@@ -4800,10 +4486,10 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                   <div className="space-y-1.5 text-slate-300">
                     <p className="font-sans font-bold text-gray-400 text-[10px] uppercase">Query Parameter Parameters & Schema:</p>
                     <ul className="list-disc pl-4 space-y-1 text-slate-300 text-[10.5px]">
-                      <li><strong className="text-[#00ffff] select-all font-mono">api_key</strong> (Required): Set to <code className="bg-transparent px-1 text-white text-[10px]">shield_lead_key_2026_secure</code> (or use <code className="bg-transparent px-1 text-white text-[10px]">X-API-Key</code> request header)</li>
-                      <li><strong className="text-[#00ffff] select-all font-mono">client_id</strong> (Optional): Filter leads for a distinct business (e.g. <code className="bg-transparent px-1 text-white text-[10px]">sydney_decking</code>)</li>
-                      <li><strong className="text-[#00ffff] select-all font-mono">start_date</strong> (Optional): Date filters (Inclusive, YYYY-MM-DD format, e.g. <code className="bg-transparent px-1 text-white text-[10px]">2026-05-01</code>)</li>
-                      <li><strong className="text-[#00ffff] select-all font-mono">end_date</strong> (Optional): Date filters (Inclusive, YYYY-MM-DD format, e.g. <code className="bg-transparent px-1 text-white text-[10px]">2026-05-31</code>)</li>
+                      <li><strong className="text-[#5fb4a9] select-all font-mono">api_key</strong> (Required): Set to <code className="bg-[#082b36] px-1 text-white text-[10px]">shield_lead_key_2026_secure</code> (or use <code className="bg-[#082b36] px-1 text-white text-[10px]">X-API-Key</code> request header)</li>
+                      <li><strong className="text-[#5fb4a9] select-all font-mono">client_id</strong> (Optional): Filter leads for a distinct business (e.g. <code className="bg-[#082b36] px-1 text-white text-[10px]">sydney_decking</code>)</li>
+                      <li><strong className="text-[#5fb4a9] select-all font-mono">start_date</strong> (Optional): Date filters (Inclusive, YYYY-MM-DD format, e.g. <code className="bg-[#082b36] px-1 text-white text-[10px]">2026-05-01</code>)</li>
+                      <li><strong className="text-[#5fb4a9] select-all font-mono">end_date</strong> (Optional): Date filters (Inclusive, YYYY-MM-DD format, e.g. <code className="bg-[#082b36] px-1 text-white text-[10px]">2026-05-31</code>)</li>
                     </ul>
                   </div>
 
@@ -4818,8 +4504,8 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                   </div>
                 </div>
 
-                <div className="bg-black/20 p-4 rounded-xl border border-dashed border-white/10">
-                  <p className="text-[10px] font-extrabold uppercase text-[#00ffff] font-mono mb-2">💻 Quick Integration Snippets</p>
+                <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-gray-200">
+                  <p className="text-[10px] font-extrabold uppercase text-[#096260] font-mono mb-2">💻 Quick Integration Snippets</p>
                   
                   <div className="space-y-3">
                     {/* CURL option */}
@@ -4844,7 +4530,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
 
             {/* Real-time Response Console Output */}
             {statsResponsePreview && (
-              <div className="bg-transparent p-5 rounded-2xl border border-white/5 space-y-2 mt-4 select-text">
+              <div className="bg-[#082b36] p-5 rounded-2xl border border-white/5 space-y-2 mt-4 select-text">
                 <div className="flex justify-between items-center border-b border-white/5 pb-2">
                   <div className="flex items-center gap-1.5 font-sans">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -4852,7 +4538,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                   </div>
                   <button
                     onClick={() => setStatsResponsePreview(null)}
-                    className="text-[9px] font-mono text-[#00ffff] hover:underline cursor-pointer"
+                    className="text-[9px] font-mono text-[#5fb4a9] hover:underline cursor-pointer"
                   >
                     Clear Response
                   </button>
@@ -4862,7 +4548,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                 </div>
               </div>
             )}
-          </PremiumTiltCard>
+          </div>
           </div>
 
         )}
@@ -4872,16 +4558,16 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
           <div className="flex-1 p-6 md:p-8 flex flex-col lg:flex-row gap-8">
             
             {/* File Directory view */}
-            <PremiumTiltCard className=" p-6 rounded-3xl border  shadow-sm lg:w-80 shrink-0 space-y-5">
+            <div className="bg-white p-6 rounded-3xl border border-[#096260]/5 shadow-sm lg:w-80 shrink-0 space-y-5">
               <div>
-                <h3 className="text-sm font-extrabold text-white mb-1">Directory Explorer</h3>
+                <h3 className="text-sm font-extrabold text-[#082b36] mb-1">Directory Explorer</h3>
                 <p className="text-xs text-gray-400">cPanel standard public_html folder architecture</p>
               </div>
 
               {/* Tree node styles */}
               <div className="space-y-1 text-xs">
                 {/* Root Folders representing directories */}
-                <div className="p-1 px-2 font-bold text-[#00ffff] font-mono text-[10px] select-none block uppercase tracking-wider">📂 public_html / lead-shield /</div>
+                <div className="p-1 px-2 font-bold text-[#096260] font-mono text-[10px] select-none block uppercase tracking-wider">📂 public_html / lead-shield /</div>
 
                 <div className="pl-4 space-y-1.5 select-none font-mono">
                   {Object.keys(APP_FILES).map(filename => {
@@ -4890,35 +4576,35 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                       <button
                         key={filename}
                         onClick={() => setSelectedVaultFile(filename)}
-                        className={`w-full p-2.5 rounded-xl text-left transition duration-150 flex items-center justify-between cursor-pointer ${isSelected ? 'bg-transparent text-[#00ffff] font-bold border-l-4 border-white/10' : 'hover:bg-transparent hover:text-[#0b4845] text-gray-300'}`}
+                        className={`w-full p-2.5 rounded-xl text-left transition duration-150 flex items-center justify-between cursor-pointer ${isSelected ? 'bg-[#d5ecea] text-[#096260] font-bold border-l-4 border-[#096260]' : 'hover:bg-[#d5ecea]/10 hover:text-[#0b4845] text-gray-600'}`}
                       >
                         <div className="flex items-center gap-1.5 truncate">
-                          <FileText size={13} className={isSelected ? 'text-[#00ffff]' : 'text-gray-400'} />
+                          <FileText size={13} className={isSelected ? 'text-[#096260]' : 'text-gray-400'} />
                           <span className="truncate">{filename}</span>
                         </div>
-                        <span className="text-[9px] font-bold bg-transparent px-2 py-0.5 rounded-lg text-gray-300 uppercase">{APP_FILES[filename].lang}</span>
+                        <span className="text-[9px] font-bold bg-[#082b36]/5 px-2 py-0.5 rounded-lg text-gray-500 uppercase">{APP_FILES[filename].lang}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="bg-transparent p-4.5 rounded-2xl border border-white/10 space-y-2 text-xs">
-                <p className="font-bold text-[#00ffff] flex items-center gap-1.5">🔑 <span>Zero-Lock Architecture</span></p>
-                <p className="text-[11px] text-gray-300 leading-normal font-normal">
+              <div className="bg-[#d5ecea]/20 p-4.5 rounded-2xl border border-[#096260]/10 space-y-2 text-xs">
+                <p className="font-bold text-[#096260] flex items-center gap-1.5">🔑 <span>Zero-Lock Architecture</span></p>
+                <p className="text-[11px] text-gray-500 leading-normal font-normal">
                   All scripts are fully coded in compliant Native PHP (OOP/PDO) using zero pre-compiled modules so they are ready for instant cPanel file manager upload.
                 </p>
               </div>
-            </PremiumTiltCard>
+            </div>
 
             {/* Code Panel Display Editor */}
-            <div className="flex-1 bg-transparent text-white rounded-3xl shadow-2xl overflow-hidden flex flex-col justify-between border border-white/5 max-h-[640px]">
+            <div className="flex-1 bg-[#082b36] text-white rounded-3xl shadow-2xl overflow-hidden flex flex-col justify-between border border-white/5 max-h-[640px]">
               
               {/* Toolbar */}
               <div className="bg-black/20 p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-[#00ffff] bg-white/10 px-2.5 py-1 rounded-xl font-bold uppercase border border-white/5">{APP_FILES[selectedVaultFile].path}</span>
+                    <span className="font-mono text-xs text-[#5fb4a9] bg-white/10 px-2.5 py-1 rounded-xl font-bold uppercase border border-white/5">{APP_FILES[selectedVaultFile].path}</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">{APP_FILES[selectedVaultFile].desc}</p>
                 </div>
@@ -4926,7 +4612,7 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => handleCopyToClipboard(APP_FILES[selectedVaultFile].content, selectedVaultFile)}
-                    className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 transition duration-150 cursor-pointer shadow-md"
+                    className="bg-[#096260] hover:bg-[#5fb4a9] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 transition duration-150 cursor-pointer shadow-md"
                   >
                     {copiedFile === selectedVaultFile ? <Check size={14} /> : <Copy size={14} />}
                     <span>{copiedFile === selectedVaultFile ? 'Copied!' : 'Copy Code'}</span>
@@ -4935,14 +4621,14 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
               </div>
 
               {/* Textarea Viewport with clean code bindings */}
-              <div className="flex-1 p-5 bg-black/10 overflow-y-auto selection:bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 flex flex-col">
-                <pre className="font-mono text-xs text-[#d5ecea] whitespace-pre p-2 leading-relaxed selection:text-white selection:bg-[#5fb4a9] block select-text overflow-x-auto">
+              <div className="flex-1 p-5 bg-black/10 overflow-y-auto selection:bg-[#096260] flex flex-col">
+                <pre className="font-mono text-xs text-[#d5ecea] whitespace-pre p-2 leading-relaxed selection:text-[#082b36] selection:bg-[#5fb4a9] block select-text overflow-x-auto">
                   <code>{APP_FILES[selectedVaultFile].content}</code>
                 </pre>
               </div>
 
               {/* Footbar */}
-              <div className="bg-black/10 p-4 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-300">
+              <div className="bg-black/10 p-4 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-500">
                 <span className="font-mono uppercase tracking-wider">🔒 STRICT COMPLIANT SOURCE CODE • CPANEL STANDARD</span>
                 <span className="font-mono select-none">LINES: {APP_FILES[selectedVaultFile].content.split('\n').length}</span>
               </div>
@@ -4956,11 +4642,11 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
         {currentTab === 'blueprint' && (
           <div className="flex-1 p-6 md:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
             
-            <PremiumTiltCard className=" p-6 md:p-8 rounded-3xl border  shadow-sm space-y-6">
-              <div className="border-b border-white/10 pb-5 space-y-1.5">
-                <span className="inline-block bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-[#00ffff] text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider font-mono">cPanel Release blueprint</span>
-                <h2 className="text-xl font-extrabold text-white">How to Deploy & Hook Up n8n into Lead Shield</h2>
-                <p className="text-xs text-white/65 leading-relaxed">Follow this simplified step-by-step masterclass to launch the platform live inside your hosting directory</p>
+            <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#096260]/5 shadow-sm space-y-6">
+              <div className="border-b border-[#096260]/10 pb-5 space-y-1.5">
+                <span className="inline-block bg-[#096260]/10 text-[#096260] text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider font-mono">cPanel Release blueprint</span>
+                <h2 className="text-xl font-extrabold text-[#082b36]">How to Deploy & Hook Up n8n into Lead Shield</h2>
+                <p className="text-xs text-[#082b36]/65 leading-relaxed">Follow this simplified step-by-step masterclass to launch the platform live inside your hosting directory</p>
               </div>
 
               {/* Blueprint items */}
@@ -4968,35 +4654,35 @@ Invoke-RestMethod -Method Post -Uri "${window.location.origin}/api/receive-lead"
                 
                 {/* Step 1 */}
                 <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-xl bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-white/5">1</div>
+                  <div className="w-8 h-8 rounded-xl bg-[#096260] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-[#5fb4a9]/25">1</div>
                   <div className="space-y-1.5 flex-1 text-xs">
-                    <p className="text-sm font-bold text-white">Upload Script Repository onto cPanel</p>
-                    <p className="text-white/80 leading-relaxed font-normal">
-                      Access your cPanel file directory, navigate inside <code className="bg-transparent px-1.5 py-0.5 font-mono rounded text-[#00ffff] font-bold">public_html/</code>, and create a root level subfolder called <code className="bg-transparent px-1.5 py-0.5 font-mono rounded text-[#00ffff] font-bold">lead-shield/</code>. Copy or extract all 8 PHP files inside matching the explorer tree.
+                    <p className="text-sm font-bold text-[#082b36]">Upload Script Repository onto cPanel</p>
+                    <p className="text-[#082b36]/80 leading-relaxed font-normal">
+                      Access your cPanel file directory, navigate inside <code className="bg-[#d5ecea] px-1.5 py-0.5 font-mono rounded text-[#096260] font-bold">public_html/</code>, and create a root level subfolder called <code className="bg-[#d5ecea] px-1.5 py-0.5 font-mono rounded text-[#096260] font-bold">lead-shield/</code>. Copy or extract all 8 PHP files inside matching the explorer tree.
                     </p>
                   </div>
                 </div>
 
                 {/* Step 2 */}
                 <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-xl bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-white/5">2</div>
+                  <div className="w-8 h-8 rounded-xl bg-[#096260] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-[#5fb4a9]/25">2</div>
                   <div className="space-y-1.5 flex-1 text-xs">
-                    <p className="text-sm font-bold text-white">Provision MySQL Database in phpMyAdmin</p>
-                    <p className="text-white/80 leading-relaxed font-normal">
-                      Go inside <span className="font-semibold text-[#00ffff]">MySQL Database Wizard</span> on cPanel. Create a database called <code className="font-mono font-bold">lead_shield_db</code>, set down a user with comprehensive read/write authorizations, and import the exact SQL queries matching your copy of <code className="font-mono text-[#00ffff] font-bold">schema.sql</code>.
+                    <p className="text-sm font-bold text-[#082b36]">Provision MySQL Database in phpMyAdmin</p>
+                    <p className="text-[#082b36]/80 leading-relaxed font-normal">
+                      Go inside <span className="font-semibold text-[#096260]">MySQL Database Wizard</span> on cPanel. Create a database called <code className="font-mono font-bold">lead_shield_db</code>, set down a user with comprehensive read/write authorizations, and import the exact SQL queries matching your copy of <code className="font-mono text-[#096260] font-bold">schema.sql</code>.
                     </p>
                   </div>
                 </div>
 
                 {/* Step 3 */}
                 <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-xl bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-white/5">3</div>
+                  <div className="w-8 h-8 rounded-xl bg-[#096260] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-[#5fb4a9]/25">3</div>
                   <div className="space-y-1.5 flex-1 text-xs">
-                    <p className="text-sm font-bold text-white">Map DB Credentials in config.php</p>
-                    <p className="text-white/80 leading-relaxed font-normal">
-                      Open <code className="font-mono bg-transparent text-[#00ffff] font-bold px-1.5 py-0.5 rounded">config.php</code> within the cPanel Code Editor. Edit the target connection parameters with your custom credentials:
+                    <p className="text-sm font-bold text-[#082b36]">Map DB Credentials in config.php</p>
+                    <p className="text-[#082b36]/80 leading-relaxed font-normal">
+                      Open <code className="font-mono bg-[#d5ecea] text-[#096260] font-bold px-1.5 py-0.5 rounded">config.php</code> within the cPanel Code Editor. Edit the target connection parameters with your custom credentials:
                     </p>
-                    <pre className="bg-transparent text-white font-mono p-4 rounded-xl border border-white/10 text-[10px] sm:text-xs overflow-x-auto leading-relaxed">
+                    <pre className="bg-[#d5ecea]/15 text-[#082b36] font-mono p-4 rounded-xl border border-[#096260]/10 text-[10px] sm:text-xs overflow-x-auto leading-relaxed">
 {`define('DB_HOST', 'localhost');
 define('DB_NAME', 'your_cpanel_db_name');
 define('DB_USER', 'your_cpanel_user');
@@ -5007,17 +4693,17 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
 
                 {/* Step 4 */}
                 <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-xl bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-white/5">4</div>
+                  <div className="w-8 h-8 rounded-xl bg-[#096260] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-[#5fb4a9]/25">4</div>
                   <div className="space-y-1.5 flex-1 text-xs">
-                    <p className="text-sm font-bold text-white">Configure n8n Webhook Node Trigger</p>
-                    <p className="text-white/80 leading-relaxed font-normal">
-                      Inside your n8n workspace, add an <span className="font-semibold text-[#00ffff]">HTTP Request Node</span> at the terminal end of your lead scraping/spam filtering chains. Configure it to send a POST payload targeting your cPanel address:
+                    <p className="text-sm font-bold text-[#082b36]">Configure n8n Webhook Node Trigger</p>
+                    <p className="text-[#082b36]/80 leading-relaxed font-normal">
+                      Inside your n8n workspace, add an <span className="font-semibold text-[#096260]">HTTP Request Node</span> at the terminal end of your lead scraping/spam filtering chains. Configure it to send a POST payload targeting your cPanel address:
                     </p>
-                    <div className="bg-transparent p-5 rounded-2xl border border-white/10 font-mono text-[10.5px] text-white space-y-2 overflow-x-auto">
-                      <p><span className="font-bold text-[#00ffff] font-mono uppercase text-[9px]">Method:</span> POST</p>
-                      <p><span className="font-bold text-[#00ffff] font-mono uppercase text-[9px]">URL:</span> https://your-domain.com/lead-shield/api/receive-lead.php</p>
-                      <p><span className="font-bold text-[#00ffff] font-mono uppercase text-[9px]">Body Type:</span> JSON Payload</p>
-                      <p className="text-[#00ffff] font-bold mt-3 pt-3 border-t border-white/10 uppercase text-[9px] tracking-wide">EXPECTED JSON PAYLOAD DIRECT FROM n8n NODE:</p>
+                    <div className="bg-[#d5ecea]/15 p-5 rounded-2xl border border-[#096260]/10 font-mono text-[10.5px] text-[#082b36] space-y-2 overflow-x-auto">
+                      <p><span className="font-bold text-[#096260] font-mono uppercase text-[9px]">Method:</span> POST</p>
+                      <p><span className="font-bold text-[#096260] font-mono uppercase text-[9px]">URL:</span> https://your-domain.com/lead-shield/api/receive-lead.php</p>
+                      <p><span className="font-bold text-[#096260] font-mono uppercase text-[9px]">Body Type:</span> JSON Payload</p>
+                      <p className="text-[#096260] font-bold mt-3 pt-3 border-t border-[#096260]/10 uppercase text-[9px] tracking-wide">EXPECTED JSON PAYLOAD DIRECT FROM n8n NODE:</p>
                       <pre className="text-[9.5px] leading-relaxed select-all">
 {`{
   "client_id": "sydney_decking",
@@ -5036,28 +4722,28 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
 
                 {/* Step 5 */}
                 <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-xl bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-white/5">5</div>
+                  <div className="w-8 h-8 rounded-xl bg-[#096260] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-md border border-[#5fb4a9]/25">5</div>
                   <div className="space-y-1.5 flex-1 text-xs">
-                    <p className="text-sm font-bold text-white">Trigger Installer Web Loader</p>
-                    <p className="text-white/80 leading-relaxed font-normal">
-                      Open your web browser and target address: <code className="bg-transparent font-mono text-[#00ffff] font-bold px-1.5 py-0.5 rounded text-xs">https://your-domain.com/lead-shield/setup.php</code>. This web load triggers table migrations, initializes security indexes, and configures seeds. Log in using default secure credentials!
+                    <p className="text-sm font-bold text-[#082b36]">Trigger Installer Web Loader</p>
+                    <p className="text-[#082b36]/80 leading-relaxed font-normal">
+                      Open your web browser and target address: <code className="bg-[#d5ecea] font-mono text-[#096260] font-bold px-1.5 py-0.5 rounded text-xs">https://your-domain.com/lead-shield/setup.php</code>. This web load triggers table migrations, initializes security indexes, and configures seeds. Log in using default secure credentials!
                     </p>
                   </div>
                 </div>
 
               </div>
-            </PremiumTiltCard>
+            </div>
 
           </div>
         )}
         {/* Intelligence Matrix Tab */}
         {currentTab === 'matrix' && (
-          <div className="bg-transparent p-6 rounded-2xl shadow-xl border border-white/10 min-h-[500px] animate-fade-in">
-            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
-              <TrendingUp className="text-white" size={24} />
+          <div className="bg-[#d5ecea]/20 p-6 rounded-2xl shadow-xl border border-[#096260]/10 min-h-[500px] animate-fade-in">
+            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-[#096260]/10">
+              <TrendingUp className="text-[#082b36]" size={24} />
               <div>
-                <h2 className="text-xl font-bold text-white tracking-wide">Global Admin Intelligence Matrix</h2>
-                <p className="text-xs text-[#00ffff] font-mono mt-1">Aggregated Client Lead Analytics & YoY Reporting</p>
+                <h2 className="text-xl font-bold text-[#082b36] tracking-wide">Global Admin Intelligence Matrix</h2>
+                <p className="text-xs text-[#096260] font-mono mt-1">Aggregated Client Lead Analytics & YoY Reporting</p>
               </div>
             </div>
             <IntelligenceMatrix clients={clients} liveLeads={leads} />
@@ -5067,17 +4753,17 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
       </div>
 
       {selectedAuditLead && (
-        <div className="fixed inset-0 bg-transparent backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card premium-border-glow w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-white/10 flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 bg-[#082b36]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-[#096260]/15 flex flex-col max-h-[85vh]">
             
-            <div className="bg-transparent p-5 text-white flex justify-between items-center border-b border-[#03212a]">
+            <div className="bg-[#082b36] p-5 text-white flex justify-between items-center border-b border-[#03212a]">
               <div>
                 <h3 className="text-sm font-extrabold truncate text-white leading-none">Submission Payload #{selectedAuditLead.id}</h3>
-                <span className="text-[9px] font-mono text-[#00ffff] mt-2 block font-bold uppercase tracking-wider">Server Catch Time: {selectedAuditLead.created_at}</span>
+                <span className="text-[9px] font-mono text-[#5fb4a9] mt-2 block font-bold uppercase tracking-wider">Server Catch Time: {selectedAuditLead.created_at}</span>
               </div>
               <button 
                 onClick={() => setSelectedAuditLead(null)}
-                className="text-[#00ffff] hover:text-white font-extrabold text-xs bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer"
+                className="text-[#5fb4a9] hover:text-white font-extrabold text-xs bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer"
               >
                 ✖
               </button>
@@ -5086,17 +4772,17 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
             <div className="p-6 overflow-y-auto space-y-4">
               
               {/* Shield details */}
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 text-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-[#096260]/10 text-xs">
                 <span className="font-extrabold text-gray-400 uppercase tracking-widest font-mono text-[9px]">Verdict classification</span>
-                <span className={`font-black px-3 py-1 rounded-full uppercase text-[10px] border ${selectedAuditLead.status === 'GENUINE' ? 'bg-transparent text-[#00ffff] border-white/10' : 'bg-red-500/100/10 text-red-400 border-red-500/10'}`}>
+                <span className={`font-black px-3 py-1 rounded-full uppercase text-[10px] border ${selectedAuditLead.status === 'GENUINE' ? 'bg-[#d5ecea] text-[#096260] border-[#096260]/20' : 'bg-red-500/10 text-red-700 border-red-500/10'}`}>
                   {selectedAuditLead.status}
                 </span>
               </div>
 
               {selectedAuditLead.status === 'SPAM' && (
-                <div className="bg-red-500/100/10 border-l-4 border-red-500 rounded-r-2xl p-4 space-y-1">
-                  <p className="text-[10px] text-red-400 font-extrabold uppercase tracking-widest font-mono">AI Gating Trigger Filter Reason</p>
-                  <p className="text-xs text-red-400 font-semibold italic">"{selectedAuditLead.ai_reason || 'Unspecified bulk pattern match.'}"</p>
+                <div className="bg-red-500/10 border-l-4 border-red-500 rounded-r-2xl p-4 space-y-1">
+                  <p className="text-[10px] text-red-950 font-extrabold uppercase tracking-widest font-mono">AI Gating Trigger Filter Reason</p>
+                  <p className="text-xs text-red-950 font-semibold italic">"{selectedAuditLead.ai_reason || 'Unspecified bulk pattern match.'}"</p>
                 </div>
               )}
 
@@ -5104,35 +4790,32 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
               <div className="space-y-3">
                 <p className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest font-mono">Incoming dynamic form headers</p>
                 
-                <div className="bg-transparent text-[#d5ecea] font-mono text-[11px] p-5 rounded-2xl border border-white/10 shadow-inner overflow-x-auto leading-relaxed">
-                  <div className="mb-4 text-[#00ffff] font-bold tracking-widest uppercase text-[10px]">Details of the Person</div>
+                <div className="bg-[#082b36] text-[#d5ecea] font-mono text-[11px] p-5 rounded-2xl border border-[#096260]/30 shadow-inner overflow-x-auto leading-relaxed">
+                  <div className="mb-4 text-[#5fb4a9] font-bold tracking-widest uppercase text-[10px]">Details of the Person</div>
                   <div className="space-y-1.5 whitespace-pre-wrap">
                     {Object.entries(selectedAuditLead.form_data).map(([k, v]) => {
                       const keyName = k.replace(/_/g, ' ');
                       const displayKey = keyName.charAt(0).toUpperCase() + keyName.slice(1);
                       return (
-                        <div key={k} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 border-b border-white/5 pb-2 last:border-0">
-                          <span className="text-[#5fb4a9] font-bold min-w-[120px] shrink-0">{displayKey}:</span>
-                          <span className="font-medium text-[#d5ecea]">{String(v)}</span>
+                        <div key={k}>
+                          <span className="text-[#5fb4a9]/80 capitalize">{displayKey}:</span> {String(v)}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="mt-5 pt-4 border-t border-white/5">
-                    <p className="text-[#00ffff] mb-1 font-bold tracking-widest uppercase text-[10px]">Payload Summary Note</p>
-                    <p className="text-gray-400">
+                  <div className="mt-6 text-[#5fb4a9]/50 pt-4 border-t border-[#096260]/20">
+                    --<br/>
                     This is a notification that a contact form was submitted on your website ({selectedAuditLead.client_id}).
-                    </p>
                   </div>
                 </div>
               </div>
 
             </div>
 
-            <div className="bg-black/20 p-5 border-t border-white/10 flex justify-end">
+            <div className="bg-gray-50/50 p-5 border-t border-gray-100 text-right">
               <button 
                 onClick={() => setSelectedAuditLead(null)}
-                className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white text-xs font-bold py-2.5 px-6 rounded-xl transition cursor-pointer shadow-md"
+                className="bg-[#082b36] hover:bg-[#096260] text-white text-xs font-bold py-2.5 px-5 rounded-xl transition cursor-pointer hover:translate-y-[-1px] shadow-md"
               >
                 Dismiss Audit Payload
               </button>
@@ -5142,18 +4825,18 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
       )}
 
       {editingClient && (
-        <div className="fixed inset-0 bg-transparent backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleUpdateClient} className="glass-card premium-border-glow w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-white/10 flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 bg-[#082b36]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleUpdateClient} className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-[#096260]/15 flex flex-col max-h-[85vh]">
             
-            <div className="bg-transparent p-5 text-white flex justify-between items-center border-b border-[#03212a]">
+            <div className="bg-[#082b36] p-5 text-white flex justify-between items-center border-b border-[#03212a]">
               <div>
                 <h3 className="text-sm font-extrabold text-white leading-none">Edit Client Workspace</h3>
-                <span className="text-[10px] font-mono text-[#00ffff] mt-2 block font-bold uppercase tracking-wider">Client ID Bound: {editingClient.client_id}</span>
+                <span className="text-[10px] font-mono text-[#5fb4a9] mt-2 block font-bold uppercase tracking-wider">Client ID Bound: {editingClient.client_id}</span>
               </div>
               <button 
                 type="button"
                 onClick={() => setEditingClient(null)}
-                className="text-[#00ffff] hover:text-white font-extrabold text-xs bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer"
+                className="text-[#5fb4a9] hover:text-white font-extrabold text-xs bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer"
               >
                 ✖
               </button>
@@ -5162,46 +4845,35 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
             <div className="p-6 overflow-y-auto space-y-4">
               
               <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Business Brand Name</label>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Business Brand Name</label>
                 <input 
                   type="text" 
                   value={editBizName}
                   onChange={(e) => setEditBizName(e.target.value)}
                   placeholder="e.g. Brisbane Decking" 
                   required
-                  className="w-full bg-black/20 border border-white/10 focus:border-[#5fb4a9] focus:ring-1 focus:ring-[#5fb4a9] rounded-xl py-2.5 px-3.5 text-xs text-white outline-none font-medium placeholder-gray-500"
+                  className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Client Short Code (e.g. GS, MP, RM, SDS)</label>
-                <input 
-                  type="text" 
-                  value={editShortCode}
-                  onChange={(e) => setEditShortCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. GS, MP, RM" 
-                  className="w-full bg-black/20 border border-white/10 focus:border-[#5fb4a9] focus:ring-1 focus:ring-[#5fb4a9] rounded-xl py-2.5 px-3.5 text-xs text-[#00ffff] font-mono font-extrabold outline-none uppercase placeholder-gray-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Contact Email</label>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Contact Email</label>
                 <input 
                   type="email" 
                   value={editBizEmail}
                   onChange={(e) => setEditBizEmail(e.target.value)}
                   placeholder="e.g. contact@brisdeck.com" 
                   required
-                  className="w-full bg-black/20 border border-white/10 focus:border-[#5fb4a9] focus:ring-1 focus:ring-[#5fb4a9] rounded-xl py-2.5 px-3.5 text-xs text-white outline-none font-medium placeholder-gray-500"
+                  className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Status</label>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Status</label>
                 <select 
                   value={editBizStatus} 
                   onChange={(e) => setEditBizStatus(e.target.value as 'active' | 'inactive')}
-                  className="w-full bg-[#082b36] border border-white/10 focus:border-[#5fb4a9] focus:ring-1 focus:ring-[#5fb4a9] rounded-xl py-2.5 px-3.5 text-xs text-white outline-none font-medium cursor-pointer"
+                  className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium cursor-pointer"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -5209,41 +4881,41 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
               </div>
 
               <div className="border-t border-gray-100 pt-4 flex flex-col space-y-2">
-                <p className="text-[10px] text-[#00ffff] font-bold uppercase tracking-widest font-mono mb-1">Services Subscribed</p>
+                <p className="text-[10px] text-[#096260] font-bold uppercase tracking-widest font-mono mb-1">Services Subscribed</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={editBizHasSeo} 
                       onChange={(e) => setEditBizHasSeo(e.target.checked)}
-                      className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                     />
                     <span>SEO & Website</span>
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={editBizHasGoogleAds} 
                       onChange={(e) => setEditBizHasGoogleAds(e.target.checked)}
-                      className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                     />
                     <span>Google Ads</span>
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={editBizHasFbAds} 
                       onChange={(e) => setEditBizHasFbAds(e.target.checked)}
-                      className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                     />
                     <span>Facebook Ads</span>
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={editBizHasGmb} 
                       onChange={(e) => setEditBizHasGmb(e.target.checked)}
-                      className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                     />
                     <span>GMB Tracking</span>
                   </label>
@@ -5255,36 +4927,36 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
                 <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Email Follow-up Configuration</h4>
                 
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">Primary Follow-up Email</label>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">Primary Follow-up Email</label>
                   <input 
                     type="email" 
                     value={editFollowupEmail}
                     onChange={(e) => setEditFollowupEmail(e.target.value)}
                     placeholder="Where should reports go?" 
-                    className="w-full bg-transparent border border-white/10 focus:border-white/10 focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-white outline-none font-medium"
+                    className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] focus:ring-1 focus:ring-[#096260] rounded-xl py-2.5 px-3.5 text-xs text-[#082b36] outline-none font-medium"
                   />
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={editAutoEmailEnabled} 
                       onChange={(e) => setEditAutoEmailEnabled(e.target.checked)}
-                      className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                     />
                     <span>Enable Automated Weekly Summary Emails</span>
                   </label>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5 font-mono">CC Emails</label>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 font-mono">CC Emails</label>
                   {editCcEmails.length > 0 && (
                     <ul className="mb-2 space-y-1">
                       {editCcEmails.map(cc => (
-                        <li key={cc.id} className="flex justify-between items-center bg-white/5 p-2 rounded-lg text-xs font-medium text-gray-300">
+                        <li key={cc.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg text-xs font-medium text-gray-700">
                           <span>{cc.email}</span>
-                          <button type="button" onClick={() => handleRemoveCcEmail(cc.id)} className="text-red-500 hover:text-red-400">✖</button>
+                          <button type="button" onClick={() => handleRemoveCcEmail(cc.id)} className="text-red-500 hover:text-red-700">✖</button>
                         </li>
                       ))}
                     </ul>
@@ -5295,9 +4967,9 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
                       value={newCcEmail}
                       onChange={(e) => setNewCcEmail(e.target.value)}
                       placeholder="Add a CC email"
-                      className="flex-1 bg-black/20 border border-white/10 focus:border-white/10 rounded-xl py-2 px-3 text-xs outline-none"
+                      className="flex-1 bg-white border border-gray-200 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none"
                     />
-                    <button type="button" onClick={handleAddCcEmail} className="bg-black/20 px-3 rounded-xl text-xs font-bold hover:bg-gray-200">
+                    <button type="button" onClick={handleAddCcEmail} className="bg-gray-100 px-3 rounded-xl text-xs font-bold hover:bg-gray-200">
                       Add
                     </button>
                   </div>
@@ -5308,36 +4980,36 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
               <div className="space-y-3 pt-4 border-t border-gray-100">
                 <h4 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Public Reporting</h4>
                 <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#082b36] cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={editBizIsPublic} 
                       onChange={(e) => setEditBizIsPublic(e.target.checked)}
-                      className="rounded border-gray-300 text-[#00ffff] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
+                      className="rounded border-gray-300 text-[#096260] focus:ring-[#096260] w-4 h-4 cursor-pointer" 
                     />
                     <span>Enable Public Intelligence Report</span>
                   </label>
                   {editBizIsPublic && (
                     <div className="flex flex-col gap-1.5 ml-6">
-                      <label className="text-[10px] text-gray-300 font-bold">Public Report Token (Optional)</label>
+                      <label className="text-[10px] text-gray-500 font-bold">Public Report Token (Optional)</label>
                       <div className="flex gap-2">
                         <input 
                           type="text" 
                           value={editBizPublicToken}
                           onChange={(e) => setEditBizPublicToken(e.target.value)}
                           placeholder="e.g. client-name-123"
-                          className="flex-1 p-2 text-xs border border-white/10 rounded-lg outline-none focus:border-white/10"
+                          className="flex-1 p-2 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#096260]"
                         />
                         <button 
                           type="button" 
                           onClick={() => setEditBizPublicToken(editingClient?.client_id + '-' + Math.random().toString(36).substring(7))}
-                          className="text-[10px] bg-black/20 px-3 rounded-lg font-bold hover:bg-gray-200"
+                          className="text-[10px] bg-gray-100 px-3 rounded-lg font-bold hover:bg-gray-200"
                         >
                           Generate
                         </button>
                       </div>
                       {editBizPublicToken && (
-                        <p className="text-[10px] text-[#00ffff] font-mono mt-1">
+                        <p className="text-[10px] text-[#096260] font-mono mt-1">
                           Report URL: {window.location.origin}/report/{editBizPublicToken}
                         </p>
                       )}
@@ -5348,17 +5020,17 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
 
             </div>
 
-            <div className="bg-white/5 p-5 border-t border-gray-100 flex gap-2 justify-end">
+            <div className="bg-gray-50/50 p-5 border-t border-gray-100 flex gap-2 justify-end">
               <button 
                 type="button"
                 onClick={() => setEditingClient(null)}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-300 text-xs font-bold py-2.5 px-5 rounded-xl transition cursor-pointer"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2.5 px-5 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 type="submit"
-                className="bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/30 hover:bg-[#5fb4a9] text-white text-xs font-bold py-2.5 px-5 rounded-xl transition cursor-pointer shadow-md shadow-[#096260]/20"
+                className="bg-[#096260] hover:bg-[#5fb4a9] text-white text-xs font-bold py-2.5 px-5 rounded-xl transition cursor-pointer shadow-md shadow-[#096260]/20"
               >
                 Save Changes 💾
               </button>
@@ -5375,8 +5047,8 @@ define('DB_PASS', 'your_cpanel_secure_password');`}
       )}
 
       {/* FOOTER CLASSIFY LICENSE */}
-      <footer className="bg-black/20 border-t border-white/10 py-5 text-center mt-auto">
-        <p className="text-[9px] text-[#00ffff]/70 uppercase tracking-widest font-mono font-extrabold">
+      <footer className="bg-white border-t border-[#096260]/10 py-5 text-center mt-auto">
+        <p className="text-[9px] text-[#096260]/70 uppercase tracking-widest font-mono font-extrabold">
           🛡️ LEAD SHIELD CLASSIFIER SYSTEMS CO. • ALL INTENSITY SAFEGUARDS ACTIVE
         </p>
       </footer>

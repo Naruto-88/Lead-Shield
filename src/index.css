@@ -1,9 +1,136 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-[#06020b] text-white;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  
+  .glass-panel-hover {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .glass-panel-hover:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.1);
+  }
+
+  .glass-active {
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+  }
+
+  .mesh-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    background: 
+      radial-gradient(circle at 15% 50%, rgba(120, 0, 255, 0.15), transparent 40%),
+      radial-gradient(circle at 85% 30%, rgba(0, 255, 255, 0.15), transparent 40%),
+      radial-gradient(circle at 50% 80%, rgba(255, 0, 255, 0.1), transparent 40%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .neon-text-cyan {
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  }
+
+  .neon-text-purple {
+    color: #b026ff;
+    text-shadow: 0 0 10px rgba(176, 38, 255, 0.5);
+  }
+}
+
+/* 1. INJECT HARDWARE-ACCELERATED STANDALONE CSS */
+body {
+  background-color: #080411 !important;
+  background: radial-gradient(circle at 50% 50%, #15082e 0%, #080411 100%) !important;
+  color: #ffffff;
+}
+
+.glass-card {
+  background: rgba(13, 8, 28, 0.45) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.glass-shine-overlay {
+  background: radial-gradient(
+    800px circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px),
+    rgba(168, 85, 247, 0.10),
+    transparent 40%
+  );
+  z-index: 0;
+}
+
+.premium-border-glow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  padding: 1px; /* border thickness */
+  background: radial-gradient(
+    300px circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px),
+    rgba(0, 255, 255, 0.8),
+    rgba(147, 51, 234, 0.8),
+    transparent 50%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.premium-3d-content {
+  transform: translateZ(20px);
+  transform-style: preserve-3d;
+}
+
+/* Typography Hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.tech-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Neon Glows */
+.neon-glow-purple {
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.4) !important;
+}
+.neon-glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
 }
 
 /* Custom styling offsets for gorgeous layout scrollbars */
@@ -15,9 +142,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(9, 98, 96, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(9, 98, 96, 0.4);
+  background: rgba(0, 255, 255, 0.3);
 }

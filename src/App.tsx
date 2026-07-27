@@ -6,6 +6,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import PublicReport from './pages/PublicReport';
 import Feedback from './pages/Feedback';
+import CosmicCanvasBackground from './components/layout/CosmicCanvasBackground';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -38,29 +39,32 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={!session ? <Login /> : <Navigate to="/" replace />} 
-        />
-        <Route 
-          path="/signup" 
-          element={!session ? <Signup /> : <Navigate to="/" replace />} 
-        />
-        <Route 
-          path="/" 
-          element={session ? <Dashboard /> : <Navigate to="/login" replace />} 
-        />
-        <Route 
-          path="/report/:token" 
-          element={<PublicReport />} 
-        />
-        <Route 
-          path="/feedback" 
-          element={<Feedback />} 
-        />
-      </Routes>
-    </Router>
+    <>
+      <CosmicCanvasBackground />
+      <Router>
+        <Routes>
+          <Route 
+            path="/login" 
+            element={!session ? <Login /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/signup" 
+            element={!session ? <Signup /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/" 
+            element={session ? <Dashboard /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/report/:token" 
+            element={<PublicReport />} 
+          />
+          <Route 
+            path="/feedback" 
+            element={<Feedback />} 
+          />
+        </Routes>
+      </Router>
+    </>
   );
 }

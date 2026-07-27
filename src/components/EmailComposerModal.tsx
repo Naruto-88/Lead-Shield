@@ -127,7 +127,7 @@ export default function EmailComposerModal({ client, onClose }: EmailComposerMod
 
   return (
     <div className="fixed inset-0 bg-[#082b36]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-[#096260]/15 flex flex-col max-h-[90vh]">
+      <div className="bg-transparent glass-card premium-border-glow rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-[#096260]/15 flex flex-col max-h-[90vh]">
         <div className="bg-[#082b36] p-5 border-b border-[#03212a] flex justify-between items-center text-white">
           <div>
             <h3 className="font-extrabold text-lg leading-none">Send Follow-up Email</h3>
@@ -135,7 +135,7 @@ export default function EmailComposerModal({ client, onClose }: EmailComposerMod
               Composing to: {client.business_name}
             </p>
           </div>
-          <button onClick={onClose} className="text-[#5fb4a9] hover:text-white font-extrabold text-xs bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer">
+          <button onClick={onClose} className="text-[#5fb4a9] hover:text-white font-extrabold text-xs bg-transparent glass-card premium-border-glow/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -157,51 +157,51 @@ export default function EmailComposerModal({ client, onClose }: EmailComposerMod
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 font-mono">To</label>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">To</label>
                   <input
                     type="text"
                     value={to}
                     onChange={e => setTo(e.target.value)}
-                    className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none"
+                    className="w-full bg-black/20 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 font-mono">CC</label>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">CC</label>
                   <input
                     type="text"
                     value={cc}
                     onChange={e => setCc(e.target.value)}
-                    className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none"
+                    className="w-full bg-black/20 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none"
                     placeholder="Comma separated emails"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 font-mono">Subject</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">Subject</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
-                  className="w-full bg-[#d5ecea]/15 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none font-bold"
+                  className="w-full bg-black/20 border border-[#096260]/10 focus:border-[#096260] rounded-xl py-2 px-3 text-xs outline-none font-bold"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 font-mono">HTML Content (Raw)</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">HTML Content (Raw)</label>
                 <textarea
                   value={htmlContent}
                   onChange={e => setHtmlContent(e.target.value)}
                   rows={15}
-                  className="w-full bg-gray-50 border border-gray-200 focus:border-[#096260] rounded-xl py-3 px-3 text-xs outline-none font-mono"
+                  className="w-full bg-white/5 border border-white/10 focus:border-[#096260] rounded-xl py-3 px-3 text-xs outline-none font-mono"
                 />
               </div>
             </>
           )}
         </div>
 
-        <div className="bg-gray-50/50 p-5 border-t border-gray-100 flex justify-end gap-3">
+        <div className="bg-white/5 p-5 border-t border-gray-100 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-800 transition"
+            className="px-5 py-2.5 text-xs font-bold text-gray-400 hover:text-white transition"
           >
             Cancel
           </button>

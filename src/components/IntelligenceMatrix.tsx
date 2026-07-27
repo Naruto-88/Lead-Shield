@@ -159,9 +159,9 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in duration-500">
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-[#096260]/10">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-transparent glass-card premium-border-glow p-4 rounded-xl shadow-sm border border-[#096260]/10">
         <div className="flex items-center gap-4">
-          <label className="text-xs font-bold text-[#082b36]">Matrix Year:</label>
+          <label className="text-xs font-bold text-white">Matrix Year:</label>
           <select 
             value={year} 
             onChange={(e) => { setYear(Number(e.target.value)); setIsCustomRange(false); }}
@@ -174,7 +174,7 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-[#082b36]">OR Custom Date Range:</span>
+          <span className="text-xs font-bold text-white">OR Custom Date Range:</span>
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-xs p-1.5 rounded border border-[#096260]/20" />
           <span className="text-xs">to</span>
           <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-xs p-1.5 rounded border border-[#096260]/20" />
@@ -188,11 +188,11 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
             <button onClick={() => setIsCustomRange(false)} className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer">Clear</button>
           )}
           
-          <div className="w-px h-6 bg-gray-200 mx-2"></div>
+          <div className="w-px h-6 bg-white/10 mx-2"></div>
           
           <button 
             onClick={handleCopyGlobalUrl}
-            className="text-xs bg-[#d5ecea] text-[#096260] px-3 py-1.5 rounded-lg font-bold hover:bg-[#5fb4a9] hover:text-white transition-colors cursor-pointer flex items-center gap-1 border border-[#096260]/20"
+            className="text-xs bg-[#00ffff]/10 text-[#00ffff] px-3 py-1.5 rounded-lg font-bold hover:bg-[#00ffff]/20 hover:text-white transition-colors cursor-pointer flex items-center gap-1 border border-[#00ffff]/30 shadow-[0_0_10px_rgba(0,255,255,0.1)]"
             title="Copy Global Report URL"
           >
             <Copy size={12} />
@@ -203,9 +203,9 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Matrix Table */}
-        <div className="lg:col-span-3 bg-white rounded-xl shadow-md border border-[#096260]/10 overflow-hidden relative">
-          <div className="p-4 border-b border-[#096260]/10 bg-gradient-to-r from-gray-50 to-white flex justify-between items-center">
-            <h3 className="font-bold text-[#082b36] text-sm flex items-center gap-2">
+        <div className="lg:col-span-3 bg-transparent glass-card premium-border-glow rounded-xl shadow-md border border-[#096260]/10 overflow-hidden relative">
+          <div className="p-4 border-b border-[#096260]/10 bg-gradient-to-r from-transparent to-black/20 flex justify-between items-center">
+            <h3 className="font-bold text-white text-sm flex items-center gap-2">
               <TrendingUp size={16} className="text-[#5fb4a9]" /> Legit Lead Intelligence Matrix
             </h3>
             {isCustomRange && <span className="text-xs bg-yellow-100/50 border border-yellow-200 text-yellow-800 px-3 py-1 rounded-full font-bold shadow-sm animate-pulse">Custom Range Active</span>}
@@ -213,16 +213,16 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
           <div className="overflow-x-auto p-4">
             <table className="w-full text-left text-xs whitespace-nowrap">
               <thead>
-                <tr className="border-b-2 border-[#096260]/20 text-[#096260] uppercase tracking-wider text-[10px]">
-                  <th className="p-3 font-extrabold bg-gray-50/50 rounded-tl-lg">Client</th>
+                <tr className="border-b-2 border-[#096260]/20 text-[#00ffff] uppercase tracking-wider text-[10px]">
+                  <th className="p-3 font-extrabold bg-white/5 rounded-tl-lg">Client</th>
                   {!isCustomRange ? (
                     Array.from({ length: 12 }, (_, i) => (
-                      <th key={i} className="p-3 font-bold text-center bg-gray-50/50">{new Date(0, i).toLocaleString('default', { month: 'short' })}</th>
+                      <th key={i} className="p-3 font-bold text-center bg-white/5">{new Date(0, i).toLocaleString('default', { month: 'short' })}</th>
                     ))
                   ) : (
-                    <th className="p-3 font-bold text-center bg-gray-50/50">Custom Range Total</th>
+                    <th className="p-3 font-bold text-center bg-white/5">Custom Range Total</th>
                   )}
-                  {!isCustomRange && <th className="p-3 font-extrabold text-center border-l border-gray-100 bg-gray-50/80 rounded-tr-lg">Year Total</th>}
+                  {!isCustomRange && <th className="p-3 font-extrabold text-center border-l border-white/10 bg-white/10 rounded-tr-lg">Year Total</th>}
                 </tr>
               </thead>
               <tbody>
@@ -238,8 +238,8 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
                   }
 
                   return (
-                    <tr key={client.client_id} className="border-b border-gray-50 hover:bg-[#d5ecea]/20 transition-colors group">
-                      <td className="p-3 text-[#082b36] font-semibold max-w-[150px] truncate group-hover:text-[#096260]" title={client.business_name}>
+                    <tr key={client.client_id} className="border-b border-white/5 hover:bg-black/20 transition-colors group">
+                      <td className="p-3 text-white font-semibold max-w-[150px] truncate group-hover:text-[#00ffff]" title={client.business_name}>
                         {client.business_name}
                       </td>
                       {!isCustomRange ? (
@@ -255,21 +255,21 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
                           
                           return (
                             <td key={i} className="p-3 text-center cursor-pointer hover:bg-[#096260]/10 rounded-lg group/cell relative transition-all" onClick={() => handleCellClick(client.client_id, m, year)}>
-                              <div className={`font-bold text-sm ${val > 0 ? 'text-[#096260]' : 'text-gray-400'}`}>{val}</div>
+                              <div className={`font-bold text-sm ${val > 0 ? 'text-[#00ffff]' : 'text-gray-400'}`}>{val}</div>
                               
                               {/* Trend Tooltip */}
-                              <div className="flex flex-col items-center justify-center gap-1 opacity-0 group-hover/cell:opacity-100 transition-all duration-200 absolute z-10 bg-white/95 backdrop-blur shadow-xl border border-gray-100 p-2 rounded-xl -top-12 left-1/2 -translate-x-1/2 pointer-events-none transform scale-95 group-hover/cell:scale-100 min-w-[80px]">
+                              <div className="flex flex-col items-center justify-center gap-1 opacity-0 group-hover/cell:opacity-100 transition-all duration-200 absolute z-10 bg-transparent glass-card premium-border-glow/95 backdrop-blur shadow-xl border border-white/10 p-2 rounded-xl -top-12 left-1/2 -translate-x-1/2 pointer-events-none transform scale-95 group-hover/cell:scale-100 min-w-[80px]">
                                 <div className="flex items-center gap-1.5 text-[9px] font-bold">
                                   <span className="text-gray-400 w-6">MoM</span>
                                   {trend.momRaw > 0 ? <TrendingUp size={10} className="text-emerald-500" /> : trend.momRaw < 0 ? <TrendingDown size={10} className="text-rose-500" /> : <Minus size={10} className="text-gray-400" />}
-                                  <span className={trend.momRaw > 0 ? 'text-emerald-600' : trend.momRaw < 0 ? 'text-rose-600' : 'text-gray-500'}>
+                                  <span className={trend.momRaw > 0 ? 'text-emerald-600' : trend.momRaw < 0 ? 'text-rose-600' : 'text-gray-400'}>
                                     {trend.momRaw > 0 ? '+' : ''}{trend.momRaw}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-[9px] font-bold">
                                   <span className="text-gray-400 w-6">YoY</span>
                                   {trend.yoyRaw > 0 ? <TrendingUp size={10} className="text-emerald-500" /> : trend.yoyRaw < 0 ? <TrendingDown size={10} className="text-rose-500" /> : <Minus size={10} className="text-gray-400" />}
-                                  <span className={trend.yoyRaw > 0 ? 'text-emerald-600' : trend.yoyRaw < 0 ? 'text-rose-600' : 'text-gray-500'}>
+                                  <span className={trend.yoyRaw > 0 ? 'text-emerald-600' : trend.yoyRaw < 0 ? 'text-rose-600' : 'text-gray-400'}>
                                     {trend.yoyRaw > 0 ? '+' : ''}{trend.yoyRaw}
                                   </span>
                                 </div>
@@ -278,11 +278,11 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
                           );
                         })
                       ) : (
-                        <td className="p-3 text-center cursor-pointer hover:bg-[#096260]/10 rounded-lg font-bold text-[#096260] text-sm" onClick={() => handleCustomRangeClick(client.client_id)}>
+                        <td className="p-3 text-center cursor-pointer hover:bg-[#096260]/10 rounded-lg font-bold text-[#00ffff] text-sm" onClick={() => handleCustomRangeClick(client.client_id)}>
                           {customTotal}
                         </td>
                       )}
-                      {!isCustomRange && <td className="p-3 text-center font-extrabold border-l border-gray-100 bg-gray-50/50 text-[#082b36] text-sm">{yearTotal}</td>}
+                      {!isCustomRange && <td className="p-3 text-center font-extrabold border-l border-white/10 bg-white/5 text-white text-sm">{yearTotal}</td>}
                     </tr>
                   );
                 })}
@@ -292,17 +292,17 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
         </div>
 
         {/* Visual Summary */}
-        <div className="bg-white rounded-xl shadow-md border border-[#096260]/10 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-[#096260]/10 bg-gradient-to-r from-gray-50 to-white flex justify-between items-center">
+        <div className="bg-transparent glass-card premium-border-glow rounded-xl shadow-md border border-[#096260]/10 overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-[#096260]/10 bg-gradient-to-r from-transparent to-black/20 flex justify-between items-center">
             <div>
-              <h3 className="font-bold text-[#082b36] text-sm">Client Share Distribution</h3>
-              <p className="text-[10px] text-gray-500 mt-0.5">{isCustomRange ? 'Custom Range' : 'Monthly Breakdown'}</p>
+              <h3 className="font-bold text-white text-sm">Client Share Distribution</h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">{isCustomRange ? 'Custom Range' : 'Monthly Breakdown'}</p>
             </div>
             {!isCustomRange && (
               <select
                 value={pieMonth}
                 onChange={(e) => setPieMonth(Number(e.target.value))}
-                className="text-[10px] p-1.5 rounded-lg border border-[#096260]/20 outline-none focus:border-[#5fb4a9] cursor-pointer bg-white text-[#082b36] font-bold"
+                className="text-[10px] p-1.5 rounded-lg border border-[#096260]/20 outline-none focus:border-[#5fb4a9] cursor-pointer bg-transparent glass-card premium-border-glow text-white font-bold"
               >
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -339,7 +339,7 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400 text-xs italic bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+              <div className="h-full flex items-center justify-center text-gray-400 text-xs italic bg-white/5 rounded-xl border border-dashed border-white/10">
                 No legit leads in this period.
               </div>
             )}
@@ -350,7 +350,7 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
       {/* Drilldown Modal (Master-Detail View) */}
       {drilldownLeads && (
         <div className="fixed inset-0 bg-[#082b36]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-[#096260]/15">
+          <div className="bg-transparent glass-card premium-border-glow rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-[#096260]/15">
             <div className="bg-[#082b36] p-5 border-b border-[#03212a] flex justify-between items-center text-white">
               <div>
                 <h3 className="font-extrabold text-lg leading-none">{drilldownTitle}</h3>
@@ -361,13 +361,13 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
                   setDrilldownLeads(null);
                   setSelectedDrilldownLead(null);
                 }} 
-                className="text-[#5fb4a9] hover:text-white font-extrabold text-xs bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer"
+                className="text-[#5fb4a9] hover:text-white font-extrabold text-xs bg-transparent glass-card premium-border-glow/10 w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="flex-1 overflow-hidden flex bg-gray-50/30">
+            <div className="flex-1 overflow-hidden flex bg-white/5">
               {drilldownLeads.length === 0 ? (
                 <div className="w-full flex items-center justify-center p-12 text-gray-400 text-sm italic">
                   No detailed lead data found for this specific period in the live database.
@@ -375,22 +375,22 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
               ) : (
                 <>
                   {/* Master List (Sidebar) */}
-                  <div className="w-1/3 border-r border-gray-200 overflow-y-auto bg-white p-4 space-y-2">
+                  <div className="w-1/3 border-r border-white/10 overflow-y-auto bg-transparent glass-card premium-border-glow p-4 space-y-2">
                     {drilldownLeads.map(lead => (
                       <div 
                         key={lead.id} 
                         onClick={() => setSelectedDrilldownLead(lead)}
                         className={`p-3 rounded-xl cursor-pointer border transition-all ${
                           selectedDrilldownLead?.id === lead.id 
-                            ? 'bg-[#d5ecea]/40 border-[#096260]/40 shadow-sm' 
-                            : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-100'
+                            ? 'bg-[#b026ff]/20 neon-glow-purple border border-[#b026ff]/40 shadow-sm' 
+                            : 'bg-transparent glass-card premium-border-glow border-transparent hover:bg-white/5 hover:border-white/10'
                         }`}
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <span className="text-[9px] font-bold text-[#096260] uppercase tracking-wider font-mono">Payload #{lead.id}</span>
+                          <span className="text-[9px] font-bold text-[#00ffff] uppercase tracking-wider font-mono">Payload #{lead.id}</span>
                           <span className="text-[9px] text-gray-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</span>
                         </div>
-                        <div className="text-xs text-[#082b36] font-semibold truncate">
+                        <div className="text-xs text-white font-semibold truncate">
                           {lead.form_data['email'] || lead.form_data['Email'] || lead.form_data['name'] || lead.form_data['Name'] || 'Submission Data'}
                         </div>
                       </div>
@@ -405,11 +405,11 @@ export default function IntelligenceMatrix({ clients, liveLeads }: { clients: Cl
                         Select a payload from the left to view raw submission details.
                       </div>
                     ) : (
-                      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#096260]/10 flex flex-col w-full max-w-3xl mx-auto">
+                      <div className="bg-transparent glass-card premium-border-glow rounded-2xl shadow-xl overflow-hidden border border-[#096260]/10 flex flex-col w-full max-w-3xl mx-auto">
                         <div className="p-6 space-y-4">
                           <div className="flex items-center justify-between pb-3 border-b border-[#096260]/10 text-xs">
                             <span className="font-extrabold text-gray-400 uppercase tracking-widest font-mono text-[9px]">Verdict classification</span>
-                            <span className="font-black px-3 py-1 rounded-full uppercase text-[10px] border bg-[#d5ecea] text-[#096260] border-[#096260]/20">
+                            <span className="font-black px-3 py-1 rounded-full uppercase text-[10px] border bg-[#00ffff]/10 text-[#00ffff] border-[#00ffff]/30 shadow-[0_0_15px_rgba(0,255,255,0.3)]">
                               {selectedDrilldownLead.status}
                             </span>
                           </div>
