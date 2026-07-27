@@ -456,8 +456,73 @@ const handleReceiveLead = async (req: express.Request, res: express.Response) =>
   }
 
   const { data: insertedLead, error } = await supabase.from('leads').insert({ client_id, form_data, status: status as "GENUINE" | "SPAM", ai_reason, channel, created_at: logTimestamp }).select().single();
+
+  // Instant Outbound Webhook dispatch to SEO Dashboard (Real-Time Per Lead Increment)
+  if (status === 'GENUINE') {
+    try {
+      let domainOrClientId = client_id;
+      if (client_id === 'gold_spar' || client_id.includes('gold')) {
+        domainOrClientId = 'goldspar.com.au';
+      }
+      
+      const seoDashboardWebhookUrl = 'https://seodashboard.netstripes.au/api/webhook/receive-lead';
+      
+      fetch(seoDashboardWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: domainOrClientId,
+          status: 'GENUINE',
+          action: 'increment',
+          lead_timestamp: logTimestamp
+        })
+      }).then(response => {
+        console.log(`[SEO Dashboard Webhook Dispatch] Live Genuine Lead sent for ${domainOrClientId}. Status: ${response.status}`);
+      }).catch(err => {
+        console.error(`[SEO Dashboard Webhook Dispatch Error]:`, err.message);
+      });
+    } catch (dispatchErr) {
+      console.error('[SEO Dashboard Webhook Error]:', dispatchErr);
+    }
+  }
+
   res.status(201).json({ status: "success", message: "Form transmission securely structured and indexed.", lead_id: insertedLead?.id, classification: { verdict: status, reason: ai_reason } });
 };
+
+apiRouter.post("/api/admin/test-seo-dashboard-webhook", async (req, res) => {
+  const { client_id } = req.body;
+  const domainOrClientId = client_id || 'goldspar.com.au';
+  const logTimestamp = new Date().toISOString();
+  
+  try {
+    const seoDashboardWebhookUrl = 'https://seodashboard.netstripes.au/api/webhook/receive-lead';
+    const response = await fetch(seoDashboardWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: domainOrClientId,
+        status: 'GENUINE',
+        action: 'increment',
+        lead_timestamp: logTimestamp
+      })
+    });
+    
+    const responseText = await response.text();
+    return res.json({
+      success: response.ok,
+      status: response.status,
+      sent_payload: {
+        client_id: domainOrClientId,
+        status: 'GENUINE',
+        action: 'increment',
+        lead_timestamp: logTimestamp
+      },
+      response_body: responseText
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 apiRouter.post("/api/receive-lead", handleReceiveLead);
 apiRouter.post("/lead-shield/api/receive-lead.php", handleReceiveLead);
