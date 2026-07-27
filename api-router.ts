@@ -524,6 +524,108 @@ apiRouter.post("/api/admin/test-seo-dashboard-webhook", async (req, res) => {
   }
 });
 
+// Sync all existing past leads for a client to the SEO Dashboard with original timestamps
+apiRouter.post("/api/admin/sync-historical-leads", async (req, res) => {
+  const { client_id, start_date } = req.body;
+  const targetClient = client_id || 'gold_spar';
+  
+  let startDateLimit = new Date();
+  if (start_date) {
+    startDateLimit = new Date(start_date);
+  } else {
+    startDateLimit.setDate(1);
+    startDateLimit.setHours(0, 0, 0, 0);
+  }
+
+  try {
+    let query = supabaseAdmin
+      .from('leads')
+      .select('*')
+      .eq('status', 'GENUINE')
+      .gte('created_at', startDateLimit.toISOString());
+
+    if (targetClient !== 'all') {
+      query = query.eq('client_id', targetClient);
+    }
+
+    const { data: leads, error } = await query;
+    if (error) throw error;
+
+    let syncedCount = 0;
+    const seoDashboardWebhookUrl = 'https://seodashboard.netstripes.au/api/webhook/receive-lead';
+
+    for (const lead of (leads || [])) {
+      let domainOrClientId = lead.client_id;
+      if (lead.client_id === 'gold_spar' || lead.client_id.includes('gold')) {
+        domainOrClientId = 'goldspar.com.au';
+      }
+
+      await fetch(seoDashboardWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: domainOrClientId,
+          status: 'GENUINE',
+          action: 'increment',
+          lead_timestamp: lead.created_at || new Date().toISOString()
+        })
+      });
+      syncedCount++;
+    }
+
+    return res.json({
+      success: true,
+      client_id: targetClient,
+      synced_leads_count: syncedCount,
+      start_date_limit: startDateLimit.toISOString()
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Insert a past historical lead into Lead Shield with a custom date and dispatch to SEO Dashboard
+apiRouter.post("/api/admin/insert-past-lead", async (req, res) => {
+  const { client_id, created_at, name, email, phone, message } = req.body;
+  if (!client_id || !created_at) return res.status(400).json({ error: "client_id and created_at are required" });
+
+  const customTimestamp = new Date(created_at).toISOString();
+  
+  try {
+    const { data: lead, error } = await supabaseAdmin.from('leads').insert({
+      client_id,
+      form_data: { name: name || 'Historical Lead', email: email || 'past@lead.com', phone: phone || '', message: message || 'Historical lead record' },
+      status: 'GENUINE',
+      ai_reason: 'Historical Lead Backfill Entry',
+      channel: 'website',
+      created_at: customTimestamp
+    }).select().single();
+
+    if (error) throw error;
+
+    let domainOrClientId = client_id;
+    if (client_id === 'gold_spar' || client_id.includes('gold')) {
+      domainOrClientId = 'goldspar.com.au';
+    }
+
+    const seoDashboardWebhookUrl = 'https://seodashboard.netstripes.au/api/webhook/receive-lead';
+    await fetch(seoDashboardWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: domainOrClientId,
+        status: 'GENUINE',
+        action: 'increment',
+        lead_timestamp: customTimestamp
+      })
+    });
+
+    return res.json({ success: true, message: "Past lead successfully created and synced to SEO Dashboard.", lead });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.post("/api/receive-lead", handleReceiveLead);
 apiRouter.post("/lead-shield/api/receive-lead.php", handleReceiveLead);
 
