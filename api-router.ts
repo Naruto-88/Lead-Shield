@@ -472,6 +472,7 @@ const handleReceiveLead = async (req: express.Request, res: express.Response) =>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: domainOrClientId,
+          domain: domainOrClientId,
           status: 'GENUINE',
           action: 'increment',
           lead_timestamp: logTimestamp
@@ -565,6 +566,7 @@ apiRouter.post("/api/admin/sync-historical-leads", async (req, res) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: domainOrClientId,
+          domain: domainOrClientId,
           status: 'GENUINE',
           action: 'increment',
           lead_timestamp: lead.created_at || new Date().toISOString()
