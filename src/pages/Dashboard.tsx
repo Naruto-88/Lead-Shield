@@ -609,13 +609,29 @@ export const DEFAULT_N8N_CONFIGS: ClientN8NConfig[] = [
     genuine_recipient_email: "hello@brisbanelandscapes.co",
     spam_recipient_email: "spam-archive@agency.com",
     webhook_url: "https://your-n8n.public_html/webhook/brisbane_landscapes_leads"
+  },
+  {
+    client_id: 'gold_spar',
+    gemini_prompt: "Filter genuine leads for Gold Spar. Classify genuine customer inquiries as GENUINE and advertisements as SPAM.",
+    gemini_models: [
+      "gemini-2.5-flash",
+      "gemini-2.5-pro",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash"
+    ],
+    openai_enabled: true,
+    openai_prompt: "Fallback classifier for Gold Spar leads.",
+    genuine_recipient_email: "contact@goldspar.com",
+    spam_recipient_email: "spam@goldspar.com",
+    webhook_url: "https://your-n8n.public_html/webhook/gold_spar_leads"
   }
 ];
 
 const DEFAULT_CLIENTS: Client[] = [
   { id: 1, client_id: 'sydney_decking', business_name: 'Sydney Decking Specialists', short_code: 'SDS', contact_email: 'contact@sydneydecking.au', status: 'active', created_at: '2026-05-18 10:14:02', has_seo: true, has_google_ads: true, has_fb_ads: true, has_gmb: true },
   { id: 2, client_id: 'melbourne_renos', business_name: 'Melbourne Renovation Co', short_code: 'MRC', contact_email: 'info@melbrenos.com.au', status: 'active', created_at: '2026-05-19 14:32:00', has_seo: true, has_google_ads: true, has_fb_ads: true, has_gmb: false },
-  { id: 3, client_id: 'brisbane_landscapes', business_name: 'Brisbane Landscape Architects', short_code: 'BLA', contact_email: 'hello@brisbanelandscapes.co', status: 'inactive', created_at: '2026-05-20 01:10:45', has_seo: true, has_google_ads: false, has_fb_ads: false, has_gmb: false }
+  { id: 3, client_id: 'brisbane_landscapes', business_name: 'Brisbane Landscape Architects', short_code: 'BLA', contact_email: 'hello@brisbanelandscapes.co', status: 'inactive', created_at: '2026-05-20 01:10:45', has_seo: true, has_google_ads: false, has_fb_ads: false, has_gmb: false },
+  { id: 4, client_id: 'gold_spar', business_name: 'Gold Spar', short_code: 'GS', contact_email: 'contact@goldspar.com', status: 'active', created_at: '2026-06-01 09:00:00', has_seo: true, has_google_ads: true, has_fb_ads: false, has_gmb: true }
 ];
 
 const DEFAULT_USERS: User[] = [

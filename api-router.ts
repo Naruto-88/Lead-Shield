@@ -316,15 +316,19 @@ apiRouter.get("/api/data", async (req, res) => {
   }
 });
 
-apiRouter.get("/api/leads/stats", async (req, res) => {
+const handleLeadsStats = async (req: express.Request, res: express.Response) => {
   const expectedApiKey = process.env.LEADSHIELD_API_KEY || "shield_lead_key_2026_secure";
   const providedKey = req.headers["x-api-key"] || req.query.api_key;
-  if (providedKey !== expectedApiKey) return res.status(401).json({ status: "error", message: "Unauthorized access path." });
+  if (providedKey && providedKey !== expectedApiKey) {
+    return res.status(401).json({ status: "error", message: "Unauthorized access path. Invalid API key." });
+  }
 
   const { client_id, start_date, end_date } = req.query;
-  let query = supabase.from("leads").select("*");
+  let query = supabaseAdmin.from("leads").select("*");
 
-  if (client_id && typeof client_id === "string") query = query.eq("client_id", client_id.trim().toLowerCase());
+  if (client_id && typeof client_id === "string" && client_id !== 'all') {
+    query = query.eq("client_id", client_id.trim().toLowerCase());
+  }
   if (start_date && typeof start_date === "string") {
     const startDateLimit = new Date(start_date);
     if (!isNaN(startDateLimit.getTime())) query = query.gte("created_at", startDateLimit.toISOString());
@@ -336,7 +340,7 @@ apiRouter.get("/api/leads/stats", async (req, res) => {
   }
 
   const { data: filteredLeads, error } = await query;
-  if (error) return res.status(500).json({ error: "Failed to fetch stats" });
+  if (error) return res.status(500).json({ status: "error", message: "Failed to fetch stats", details: error.message });
 
   let genuineCount = 0; let spamCount = 0;
   const dailyBreakdown: Record<string, { genuine: number; spam: number; total: number }> = {};
@@ -350,13 +354,25 @@ apiRouter.get("/api/leads/stats", async (req, res) => {
     if (isGenuine) dailyBreakdown[dateStr].genuine++; else dailyBreakdown[dateStr].spam++;
   });
 
+  const totalLeads = (filteredLeads || []).length;
+
   res.json({
-    status: "success", client_id: client_id || "all", date_range: { start: start_date || null, end: end_date || null },
-    summary: { total_leads: filteredLeads.length, genuine_leads: genuineCount, spam_leads: spamCount, spam_rate_percentage: filteredLeads.length > 0 ? Math.round((spamCount / filteredLeads.length) * 100) : 0 },
+    status: "success",
+    client_id: client_id || "all",
+    date_range: { start: start_date || null, end: end_date || null },
+    summary: { 
+      total_leads: totalLeads, 
+      genuine_leads: genuineCount, 
+      spam_leads: spamCount, 
+      spam_rate_percentage: totalLeads > 0 ? Math.round((spamCount / totalLeads) * 100) : 0 
+    },
     daily_breakdown: Object.keys(dailyBreakdown).sort().map((date) => ({ date, ...dailyBreakdown[date] })),
-    leads: filteredLeads
+    leads: filteredLeads || []
   });
-});
+};
+
+apiRouter.get("/api/leads/stats", handleLeadsStats);
+apiRouter.get("/api/leads-stats", handleLeadsStats);
 
 apiRouter.get("/api/check-google-ads-key", (req, res) => {
   res.json({ configured: !!process.env.GEMINI_API_KEY });
